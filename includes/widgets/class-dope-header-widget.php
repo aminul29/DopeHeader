@@ -608,6 +608,14 @@ class Dope_Header_Widget extends Widget_Base {
 		);
 
 		$this->add_control(
+			'topbar_content_heading',
+			array(
+				'label' => esc_html__( 'Announcement Content', 'dope-header' ),
+				'type'  => Controls_Manager::HEADING,
+			)
+		);
+
+		$this->add_control(
 			'topbar_background_color',
 			array(
 				'label'     => esc_html__( 'Background Color', 'dope-header' ),
@@ -640,6 +648,21 @@ class Dope_Header_Widget extends Widget_Base {
 		);
 
 		$this->add_control(
+			'topbar_content_divider',
+			array(
+				'type' => Controls_Manager::DIVIDER,
+			)
+		);
+
+		$this->add_control(
+			'topbar_arrows_heading',
+			array(
+				'label' => esc_html__( 'Carousel Arrows', 'dope-header' ),
+				'type'  => Controls_Manager::HEADING,
+			)
+		);
+
+		$this->add_control(
 			'topbar_arrow_color',
 			array(
 				'label'     => esc_html__( 'Arrow Color', 'dope-header' ),
@@ -664,6 +687,21 @@ class Dope_Header_Widget extends Widget_Base {
 		);
 
 		$this->add_control(
+			'topbar_social_divider',
+			array(
+				'type' => Controls_Manager::DIVIDER,
+			)
+		);
+
+		$this->add_control(
+			'topbar_social_heading',
+			array(
+				'label' => esc_html__( 'Social Icons', 'dope-header' ),
+				'type'  => Controls_Manager::HEADING,
+			)
+		);
+
+		$this->add_control(
 			'topbar_social_background',
 			array(
 				'label'     => esc_html__( 'Social Circle Background', 'dope-header' ),
@@ -684,6 +722,43 @@ class Dope_Header_Widget extends Widget_Base {
 				'selectors' => array(
 					'{{WRAPPER}} .dh-topbar__social' => 'color: {{VALUE}};',
 				),
+			)
+		);
+
+		$this->add_responsive_control(
+			'topbar_social_background_size',
+			array(
+				'label'      => esc_html__( 'Social Background Size', 'dope-header' ),
+				'type'       => Controls_Manager::SLIDER,
+				'size_units' => array( 'px' ),
+				'range'      => array(
+					'px' => array(
+						'min' => 18,
+						'max' => 64,
+					),
+				),
+				'default'    => array(
+					'size' => 24,
+					'unit' => 'px',
+				),
+				'selectors'  => array(
+					'{{WRAPPER}} .dh-topbar__social' => 'width: {{SIZE}}{{UNIT}}; height: {{SIZE}}{{UNIT}};',
+				),
+			)
+		);
+
+		$this->add_control(
+			'topbar_layout_divider',
+			array(
+				'type' => Controls_Manager::DIVIDER,
+			)
+		);
+
+		$this->add_control(
+			'topbar_layout_heading',
+			array(
+				'label' => esc_html__( 'Bar Layout', 'dope-header' ),
+				'type'  => Controls_Manager::HEADING,
 			)
 		);
 
@@ -724,6 +799,14 @@ class Dope_Header_Widget extends Widget_Base {
 			array(
 				'label' => esc_html__( 'Navigation Row', 'dope-header' ),
 				'tab'   => Controls_Manager::TAB_STYLE,
+			)
+		);
+
+		$this->add_control(
+			'nav_row_heading',
+			array(
+				'label' => esc_html__( 'Row Styling', 'dope-header' ),
+				'type'  => Controls_Manager::HEADING,
 			)
 		);
 
@@ -774,6 +857,21 @@ class Dope_Header_Widget extends Widget_Base {
 			)
 		);
 
+		$this->add_control(
+			'nav_logo_divider',
+			array(
+				'type' => Controls_Manager::DIVIDER,
+			)
+		);
+
+		$this->add_control(
+			'nav_logo_heading',
+			array(
+				'label' => esc_html__( 'Logo Block', 'dope-header' ),
+				'type'  => Controls_Manager::HEADING,
+			)
+		);
+
 		$this->add_responsive_control(
 			'logo_width',
 			array(
@@ -818,11 +916,34 @@ class Dope_Header_Widget extends Widget_Base {
 			)
 		);
 
+		$this->add_control(
+			'menu_typography_heading',
+			array(
+				'label' => esc_html__( 'Typography', 'dope-header' ),
+				'type'  => Controls_Manager::HEADING,
+			)
+		);
+
 		$this->add_group_control(
 			Group_Control_Typography::get_type(),
 			array(
 				'name'     => 'menu_typography',
 				'selector' => '{{WRAPPER}} .dh-menu > li > a',
+			)
+		);
+
+		$this->add_control(
+			'menu_colors_divider',
+			array(
+				'type' => Controls_Manager::DIVIDER,
+			)
+		);
+
+		$this->add_control(
+			'menu_colors_heading',
+			array(
+				'label' => esc_html__( 'Colors and States', 'dope-header' ),
+				'type'  => Controls_Manager::HEADING,
 			)
 		);
 
@@ -876,6 +997,14 @@ class Dope_Header_Widget extends Widget_Base {
 			array(
 				'label' => esc_html__( 'Actions and Language', 'dope-header' ),
 				'tab'   => Controls_Manager::TAB_STYLE,
+			)
+		);
+
+		$this->add_control(
+			'actions_icons_heading',
+			array(
+				'label' => esc_html__( 'Icons and Text', 'dope-header' ),
+				'type'  => Controls_Manager::HEADING,
 			)
 		);
 
@@ -940,6 +1069,21 @@ class Dope_Header_Widget extends Widget_Base {
 				'selectors'  => array(
 					'{{WRAPPER}} .dh-action i, {{WRAPPER}} .dh-action svg, {{WRAPPER}} .dh-language i, {{WRAPPER}} .dh-language svg' => 'font-size: {{SIZE}}{{UNIT}}; width: {{SIZE}}{{UNIT}}; height: {{SIZE}}{{UNIT}};',
 				),
+			)
+		);
+
+		$this->add_control(
+			'actions_surface_divider',
+			array(
+				'type' => Controls_Manager::DIVIDER,
+			)
+		);
+
+		$this->add_control(
+			'actions_surface_heading',
+			array(
+				'label' => esc_html__( 'Action Button Surface', 'dope-header' ),
+				'type'  => Controls_Manager::HEADING,
 			)
 		);
 
@@ -1016,6 +1160,21 @@ class Dope_Header_Widget extends Widget_Base {
 			)
 		);
 
+		$this->add_control(
+			'actions_language_divider',
+			array(
+				'type' => Controls_Manager::DIVIDER,
+			)
+		);
+
+		$this->add_control(
+			'actions_language_heading',
+			array(
+				'label' => esc_html__( 'Language Link Border', 'dope-header' ),
+				'type'  => Controls_Manager::HEADING,
+			)
+		);
+
 		$this->add_group_control(
 			Group_Control_Border::get_type(),
 			array(
@@ -1042,6 +1201,14 @@ class Dope_Header_Widget extends Widget_Base {
 		);
 
 		$this->add_control(
+			'mobile_toggle_heading',
+			array(
+				'label' => esc_html__( 'Hamburger Toggle', 'dope-header' ),
+				'type'  => Controls_Manager::HEADING,
+			)
+		);
+
+		$this->add_control(
 			'mobile_toggle_color',
 			array(
 				'label'     => esc_html__( 'Hamburger Color', 'dope-header' ),
@@ -1050,6 +1217,21 @@ class Dope_Header_Widget extends Widget_Base {
 				'selectors' => array(
 					'{{WRAPPER}} .dh-mobile-toggle' => 'color: {{VALUE}};',
 				),
+			)
+		);
+
+		$this->add_control(
+			'mobile_drawer_divider',
+			array(
+				'type' => Controls_Manager::DIVIDER,
+			)
+		);
+
+		$this->add_control(
+			'mobile_drawer_heading',
+			array(
+				'label' => esc_html__( 'Drawer Panel', 'dope-header' ),
+				'type'  => Controls_Manager::HEADING,
 			)
 		);
 
