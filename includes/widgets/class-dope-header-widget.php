@@ -333,6 +333,17 @@ class Dope_Header_Widget extends Widget_Base {
 			)
 		);
 
+		$this->add_control(
+			'header_absolute_position',
+			array(
+				'label'        => esc_html__( 'Absolute Position Header', 'dope-header' ),
+				'type'         => Controls_Manager::SWITCHER,
+				'return_value' => 'yes',
+				'default'      => '',
+				'description'  => esc_html__( 'Places the header above the next section, useful for hero overlays.', 'dope-header' ),
+			)
+		);
+
 		$this->end_controls_section();
 	}
 
@@ -1082,12 +1093,15 @@ class Dope_Header_Widget extends Widget_Base {
 
 		$widget_classes = 'dh-widget' . ( $show_topbar ? '' : ' dh-widget--no-topbar' );
 
+		if ( $this->is_enabled( $settings, 'header_absolute_position', false ) ) {
+			$widget_classes .= ' dh-widget--absolute';
+		}
+
 		echo '<header class="' . esc_attr( $widget_classes ) . '" id="' . esc_attr( $uid ) . '" style="--dh-mobile-breakpoint:' . esc_attr( (string) $mobile_breakpoint ) . 'px;" data-dh-mobile-config="' . esc_attr( wp_json_encode( $mobile_config ) ) . '">';
-		echo '<div class="dh-shell">';
 
 		if ( $show_topbar ) {
 			echo '<div class="dh-topbar" data-dh-config="' . esc_attr( wp_json_encode( $topbar_config ) ) . '">';
-			echo '<div class="dh-topbar__inner">';
+			echo '<div class="dh-shell dh-topbar__inner">';
 			echo '<div class="dh-topbar__center">';
 
 			if ( $show_topbar_arrows ) {
@@ -1122,7 +1136,7 @@ class Dope_Header_Widget extends Widget_Base {
 			echo '</div></div>';
 		}
 
-		echo '<div class="dh-main"><div class="dh-main__inner">';
+		echo '<div class="dh-main"><div class="dh-shell dh-main__inner">';
 
 		echo '<nav class="dh-nav" aria-label="' . esc_attr__( 'Primary navigation', 'dope-header' ) . '">';
 		if ( '' !== trim( $desktop_menu ) ) {
@@ -1142,6 +1156,7 @@ class Dope_Header_Widget extends Widget_Base {
 
 		echo '</div></div></div>';
 
+		echo '<div class="dh-brand-layer"><div class="dh-shell">';
 		printf(
 			'<div class="dh-brand-float"><a class="dh-brand-float__link" href="%1$s"%2$s%3$s><img class="dh-brand-float__logo" src="%4$s" alt="%5$s" loading="lazy" /></a></div>',
 			esc_url( $logo_url ),
@@ -1150,7 +1165,7 @@ class Dope_Header_Widget extends Widget_Base {
 			esc_url( $logo_src ),
 			esc_attr( $logo_alt )
 		);
-		echo '</div>';
+		echo '</div></div>';
 
 		if ( $mobile_enabled ) {
 			echo '<div class="dh-mobile-drawer" id="' . esc_attr( $drawer_id ) . '" hidden>';

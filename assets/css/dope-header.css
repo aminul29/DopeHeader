@@ -3,10 +3,19 @@
   --dh-logo-width: 132px;
   --dh-topbar-height: 52px;
   --dh-main-height: 58px;
+  --dh-shell-max-width: 1280px;
   --dh-focus: #4ea1ff;
   position: relative;
   width: 100%;
   font-family: "Outfit", "Poppins", "Segoe UI", sans-serif;
+}
+
+.dh-widget--absolute {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 100;
 }
 
 .dh-widget * {
@@ -14,7 +23,7 @@
 }
 
 .dh-shell {
-  width: min(1280px, 100%);
+  width: min(var(--dh-shell-max-width), 100%);
   margin: 0 auto;
   position: relative;
 }
@@ -26,6 +35,7 @@
 }
 
 .dh-topbar__inner {
+  width: min(var(--dh-shell-max-width), 100%);
   min-height: var(--dh-topbar-height);
   padding-left: calc(var(--dh-logo-width) + 20px);
   padding-right: 16px;
@@ -125,6 +135,7 @@
 }
 
 .dh-main__inner {
+  width: min(var(--dh-shell-max-width), 100%);
   min-height: var(--dh-main-height);
   padding-left: calc(var(--dh-logo-width) + 20px);
   padding-right: 16px;
@@ -132,6 +143,12 @@
   grid-template-columns: 1fr auto;
   align-items: center;
   gap: 16px;
+}
+
+.dh-brand-layer {
+  position: absolute;
+  inset: 0 0 auto;
+  pointer-events: none;
 }
 
 .dh-brand-float {
@@ -146,6 +163,11 @@
   align-items: center;
   justify-content: center;
   padding: 8px 10px;
+}
+
+.dh-brand-float,
+.dh-brand-float * {
+  pointer-events: auto;
 }
 
 .dh-widget--no-topbar .dh-brand-float {
