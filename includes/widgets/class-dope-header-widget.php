@@ -111,23 +111,15 @@ class Dope_Header_Widget extends Widget_Base {
 		$this->start_controls_section(
 			'section_topbar',
 			array(
-				'label' => esc_html__( 'Announcement Bar', 'dope-header' ),
+				'label' => esc_html__( 'Topbar', 'dope-header' ),
 				'tab'   => Controls_Manager::TAB_CONTENT,
-			)
-		);
-
-		$this->add_control(
-			'topbar_visibility_heading',
-			array(
-				'label' => esc_html__( 'Visibility', 'dope-header' ),
-				'type'  => Controls_Manager::HEADING,
 			)
 		);
 
 		$this->add_control(
 			'enable_topbar',
 			array(
-				'label'        => esc_html__( 'Show Announcement Bar', 'dope-header' ),
+				'label'        => esc_html__( 'Enable Topbar', 'dope-header' ),
 				'type'         => Controls_Manager::SWITCHER,
 				'return_value' => 'yes',
 				'default'      => 'yes',
@@ -146,24 +138,9 @@ class Dope_Header_Widget extends Widget_Base {
 		);
 
 		$this->add_control(
-			'topbar_messages_divider',
-			array(
-				'type' => Controls_Manager::DIVIDER,
-			)
-		);
-
-		$this->add_control(
-			'topbar_messages_heading',
-			array(
-				'label' => esc_html__( 'Announcement Items', 'dope-header' ),
-				'type'  => Controls_Manager::HEADING,
-			)
-		);
-
-		$this->add_control(
 			'topbar_items',
 			array(
-				'label'       => esc_html__( 'Messages', 'dope-header' ),
+				'label'       => esc_html__( 'Announcements', 'dope-header' ),
 				'type'        => Controls_Manager::REPEATER,
 				'fields'      => $repeater->get_controls(),
 				'title_field' => '{{{ announcement_text }}}',
@@ -177,26 +154,9 @@ class Dope_Header_Widget extends Widget_Base {
 		);
 
 		$this->add_control(
-			'topbar_slider_divider',
-			array(
-				'type'      => Controls_Manager::DIVIDER,
-				'condition' => array( 'enable_topbar' => 'yes' ),
-			)
-		);
-
-		$this->add_control(
-			'topbar_slider_heading',
-			array(
-				'label'     => esc_html__( 'Carousel Settings', 'dope-header' ),
-				'type'      => Controls_Manager::HEADING,
-				'condition' => array( 'enable_topbar' => 'yes' ),
-			)
-		);
-
-		$this->add_control(
 			'topbar_show_arrows',
 			array(
-				'label'        => esc_html__( 'Show Navigation Arrows', 'dope-header' ),
+				'label'        => esc_html__( 'Show Arrows', 'dope-header' ),
 				'type'         => Controls_Manager::SWITCHER,
 				'return_value' => 'yes',
 				'default'      => 'yes',
@@ -245,26 +205,9 @@ class Dope_Header_Widget extends Widget_Base {
 		);
 
 		$this->add_control(
-			'topbar_socials_divider',
-			array(
-				'type'      => Controls_Manager::DIVIDER,
-				'condition' => array( 'enable_topbar' => 'yes' ),
-			)
-		);
-
-		$this->add_control(
-			'topbar_socials_heading',
-			array(
-				'label'     => esc_html__( 'Social Links', 'dope-header' ),
-				'type'      => Controls_Manager::HEADING,
-				'condition' => array( 'enable_topbar' => 'yes' ),
-			)
-		);
-
-		$this->add_control(
 			'show_topbar_socials',
 			array(
-				'label'        => esc_html__( 'Show Social Links', 'dope-header' ),
+				'label'        => esc_html__( 'Show Topbar Social Icons', 'dope-header' ),
 				'type'         => Controls_Manager::SWITCHER,
 				'return_value' => 'yes',
 				'default'      => 'yes',
@@ -315,7 +258,7 @@ class Dope_Header_Widget extends Widget_Base {
 		$this->add_control(
 			'topbar_social_items',
 			array(
-				'label'       => esc_html__( 'Social Link Items', 'dope-header' ),
+				'label'       => esc_html__( 'Social Items', 'dope-header' ),
 				'type'        => Controls_Manager::REPEATER,
 				'fields'      => $social_repeater->get_controls(),
 				'title_field' => '{{{ social_label }}}',
@@ -375,16 +318,8 @@ class Dope_Header_Widget extends Widget_Base {
 		$this->start_controls_section(
 			'section_header',
 			array(
-				'label' => esc_html__( 'Branding and Navigation', 'dope-header' ),
+				'label' => esc_html__( 'Header', 'dope-header' ),
 				'tab'   => Controls_Manager::TAB_CONTENT,
-			)
-		);
-
-		$this->add_control(
-			'header_brand_heading',
-			array(
-				'label' => esc_html__( 'Branding', 'dope-header' ),
-				'type'  => Controls_Manager::HEADING,
 			)
 		);
 
@@ -422,24 +357,9 @@ class Dope_Header_Widget extends Widget_Base {
 		);
 
 		$this->add_control(
-			'header_navigation_divider',
-			array(
-				'type' => Controls_Manager::DIVIDER,
-			)
-		);
-
-		$this->add_control(
-			'header_navigation_heading',
-			array(
-				'label' => esc_html__( 'Navigation', 'dope-header' ),
-				'type'  => Controls_Manager::HEADING,
-			)
-		);
-
-		$this->add_control(
 			'menu_id',
 			array(
-				'label'   => esc_html__( 'Primary Menu', 'dope-header' ),
+				'label'   => esc_html__( 'Navigation Menu', 'dope-header' ),
 				'type'    => Controls_Manager::SELECT,
 				'options' => $this->get_menu_options(),
 				'default' => '',
@@ -449,7 +369,7 @@ class Dope_Header_Widget extends Widget_Base {
 		$this->add_control(
 			'menu_fallback_label',
 			array(
-				'label'       => esc_html__( 'Editor Placeholder Text', 'dope-header' ),
+				'label'       => esc_html__( 'Editor Fallback Label', 'dope-header' ),
 				'type'        => Controls_Manager::TEXT,
 				'label_block' => true,
 				'default'     => esc_html__( 'Select a WordPress menu in the widget settings.', 'dope-header' ),
@@ -457,24 +377,9 @@ class Dope_Header_Widget extends Widget_Base {
 		);
 
 		$this->add_control(
-			'header_layout_divider',
-			array(
-				'type' => Controls_Manager::DIVIDER,
-			)
-		);
-
-		$this->add_control(
-			'header_layout_heading',
-			array(
-				'label' => esc_html__( 'Layout Behavior', 'dope-header' ),
-				'type'  => Controls_Manager::HEADING,
-			)
-		);
-
-		$this->add_control(
 			'header_absolute_position',
 			array(
-				'label'        => esc_html__( 'Overlay Header on Hero', 'dope-header' ),
+				'label'        => esc_html__( 'Absolute Position Header', 'dope-header' ),
 				'type'         => Controls_Manager::SWITCHER,
 				'return_value' => 'yes',
 				'default'      => '',
@@ -494,16 +399,8 @@ class Dope_Header_Widget extends Widget_Base {
 		$this->start_controls_section(
 			'section_actions',
 			array(
-				'label' => esc_html__( 'Header Actions', 'dope-header' ),
+				'label' => esc_html__( 'Actions', 'dope-header' ),
 				'tab'   => Controls_Manager::TAB_CONTENT,
-			)
-		);
-
-		$this->add_control(
-			'actions_items_heading',
-			array(
-				'label' => esc_html__( 'Utility Icons', 'dope-header' ),
-				'type'  => Controls_Manager::HEADING,
 			)
 		);
 
@@ -548,7 +445,7 @@ class Dope_Header_Widget extends Widget_Base {
 		$this->add_control(
 			'action_items',
 			array(
-				'label'       => esc_html__( 'Header Icon Items', 'dope-header' ),
+				'label'       => esc_html__( 'Action Items', 'dope-header' ),
 				'type'        => Controls_Manager::REPEATER,
 				'fields'      => $actions_repeater->get_controls(),
 				'title_field' => '{{{ action_label }}}',
@@ -594,24 +491,9 @@ class Dope_Header_Widget extends Widget_Base {
 		);
 
 		$this->add_control(
-			'actions_language_divider_content',
-			array(
-				'type' => Controls_Manager::DIVIDER,
-			)
-		);
-
-		$this->add_control(
-			'actions_language_heading_content',
-			array(
-				'label' => esc_html__( 'Language Selector', 'dope-header' ),
-				'type'  => Controls_Manager::HEADING,
-			)
-		);
-
-		$this->add_control(
 			'show_language_menu',
 			array(
-				'label'        => esc_html__( 'Show Language Selector', 'dope-header' ),
+				'label'        => esc_html__( 'Show Language Menu', 'dope-header' ),
 				'type'         => Controls_Manager::SWITCHER,
 				'return_value' => 'yes',
 				'default'      => 'no',
@@ -621,7 +503,7 @@ class Dope_Header_Widget extends Widget_Base {
 		$this->add_control(
 			'language_menu_id',
 			array(
-				'label'       => esc_html__( 'Language Selector Menu', 'dope-header' ),
+				'label'       => esc_html__( 'Language Menu', 'dope-header' ),
 				'type'        => Controls_Manager::SELECT,
 				'options'     => $this->get_menu_options(),
 				'default'     => '',
@@ -669,23 +551,15 @@ class Dope_Header_Widget extends Widget_Base {
 		$this->start_controls_section(
 			'section_mobile',
 			array(
-				'label' => esc_html__( 'Mobile Menu', 'dope-header' ),
+				'label' => esc_html__( 'Mobile', 'dope-header' ),
 				'tab'   => Controls_Manager::TAB_CONTENT,
-			)
-		);
-
-		$this->add_control(
-			'mobile_behavior_heading',
-			array(
-				'label' => esc_html__( 'Drawer Behavior', 'dope-header' ),
-				'type'  => Controls_Manager::HEADING,
 			)
 		);
 
 		$this->add_control(
 			'enable_mobile_drawer',
 			array(
-				'label'        => esc_html__( 'Show Mobile Drawer Toggle', 'dope-header' ),
+				'label'        => esc_html__( 'Enable Hamburger Drawer', 'dope-header' ),
 				'type'         => Controls_Manager::SWITCHER,
 				'return_value' => 'yes',
 				'default'      => 'yes',
@@ -695,7 +569,7 @@ class Dope_Header_Widget extends Widget_Base {
 		$this->add_control(
 			'mobile_breakpoint',
 			array(
-				'label'     => esc_html__( 'Drawer Breakpoint (px)', 'dope-header' ),
+				'label'     => esc_html__( 'Mobile Breakpoint (px)', 'dope-header' ),
 				'type'      => Controls_Manager::NUMBER,
 				'default'   => 1024,
 				'min'       => 640,
