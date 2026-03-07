@@ -814,6 +814,19 @@ class Dope_Header_Widget extends Widget_Base {
 		);
 
 		$this->add_control(
+			'topbar_arrow_border',
+			array(
+				'label'        => esc_html__( 'Show Arrow Border', 'dope-header' ),
+				'type'         => Controls_Manager::SWITCHER,
+				'return_value' => 'yes',
+				'default'      => '',
+				'selectors'    => array(
+					'{{WRAPPER}} .dh-topbar__arrow' => 'border: 1px solid currentColor; border-radius: 3px;',
+				),
+			)
+		);
+
+		$this->add_control(
 			'topbar_arrow_hover_color',
 			array(
 				'label'     => esc_html__( 'Arrow Hover Color', 'dope-header' ),
@@ -1931,10 +1944,10 @@ class Dope_Header_Widget extends Widget_Base {
 	 */
 	private function render_inline_chevron( bool $left ): string {
 		if ( $left ) {
-			return '<svg viewBox="0 0 20 20" aria-hidden="true" focusable="false"><path d="M12.2 4.8a1 1 0 0 1 0 1.4L8.4 10l3.8 3.8a1 1 0 1 1-1.4 1.4l-4.5-4.5a1 1 0 0 1 0-1.4l4.5-4.5a1 1 0 0 1 1.4 0z" fill="currentColor"/></svg>';
+			return '<svg viewBox="0 0 20 20" aria-hidden="true" focusable="false"><path d="M15 10H5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><path d="M9 6l-4 4 4 4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>';
 		}
 
-		return '<svg viewBox="0 0 20 20" aria-hidden="true" focusable="false"><path d="M7.8 15.2a1 1 0 0 1 0-1.4l3.8-3.8-3.8-3.8a1 1 0 1 1 1.4-1.4l4.5 4.5a1 1 0 0 1 0 1.4l-4.5 4.5a1 1 0 0 1-1.4 0z" fill="currentColor"/></svg>';
+		return '<svg viewBox="0 0 20 20" aria-hidden="true" focusable="false"><path d="M5 10h10" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><path d="M11 6l4 4-4 4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>';
 	}
 
 	/**

@@ -78,7 +78,9 @@
 .dh-topbar__arrow {
   appearance: none;
   border: 0;
+  border-radius: 0;
   background: transparent;
+  box-shadow: none;
   color: #8e8e8e;
   padding: 2px;
   cursor: pointer;
