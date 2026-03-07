@@ -72,7 +72,12 @@ class Dope_Header_Widget extends Widget_Base {
 	 * @return array<int, string>
 	 */
 	public function get_style_depends(): array {
-		return array( 'dope-header-widget' );
+		return array(
+			'dope-header-widget',
+			'elementor-icons-fa-solid',
+			'elementor-icons-fa-regular',
+			'elementor-icons-fa-brands',
+		);
 	}
 
 	/**
@@ -1300,7 +1305,9 @@ class Dope_Header_Widget extends Widget_Base {
 		$url             = $this->get_url_value( $item['social_link'] ?? array(), '#' );
 		$link_attributes = $this->get_link_attributes( $item['social_link'] ?? array() );
 		$label           = isset( $item['social_label'] ) ? sanitize_text_field( $item['social_label'] ) : esc_html__( 'Social link', 'dope-header' );
-		$icon_html       = $this->get_icon_html( $item['social_icon'] ?? array() );
+		$icon_html       = $this->get_fontawesome_icon_html( $item['social_icon'] ?? array() );
+		$item_id         = isset( $item['_id'] ) ? sanitize_html_class( (string) $item['_id'] ) : '';
+		$network_slug    = sanitize_html_class( sanitize_title( $label ) );
 
 		if ( '' === $label ) {
 			$label = esc_html__( 'Social link', 'dope-header' );
@@ -1310,15 +1317,58 @@ class Dope_Header_Widget extends Widget_Base {
 			return;
 		}
 
+		$classes = array(
+			'dh-topbar__social',
+			'elementor-icon',
+			'elementor-social-icon',
+		);
+
+		if ( '' !== $network_slug ) {
+			$classes[] = 'elementor-social-icon-' . $network_slug;
+		}
+
+		if ( '' !== $item_id ) {
+			$classes[] = 'elementor-repeater-item-' . $item_id;
+		}
+
 		printf(
-			'<a class="dh-topbar__social" href="%1$s"%2$s%3$s>',
+			'<a class="%1$s" href="%2$s"%3$s%4$s>',
+			esc_attr( implode( ' ', $classes ) ),
 			esc_url( $url ),
 			isset( $link_attributes['target'] ) ? ' target="' . esc_attr( $link_attributes['target'] ) . '"' : '',
 			isset( $link_attributes['rel'] ) ? ' rel="' . esc_attr( $link_attributes['rel'] ) . '"' : ''
 		);
+		echo '<span class="elementor-screen-only">' . esc_html( $label ) . '</span>';
 		echo wp_kses( $icon_html, $this->get_allowed_svg_html() );
-		echo '<span class="screen-reader-text">' . esc_html( $label ) . '</span>';
 		echo '</a>';
+	}
+
+	/**
+	 * Gets Font Awesome <i> markup from an Elementor icon control value.
+	 *
+	 * @param array $icon Icon control value.
+	 * @return string
+	 */
+	private function get_fontawesome_icon_html( array $icon ): string {
+		if ( empty( $icon['value'] ) || ! is_string( $icon['value'] ) ) {
+			return '';
+		}
+
+		$classes = array_filter(
+			array_map(
+				'sanitize_html_class',
+				preg_split( '/\s+/', trim( $icon['value'] ) )
+			)
+		);
+
+		if ( empty( $classes ) ) {
+			return '';
+		}
+
+		return sprintf(
+			'<i aria-hidden="true" class="%s"></i>',
+			esc_attr( implode( ' ', $classes ) )
+		);
 	}
 
 	/**
@@ -1471,6 +1521,7 @@ class Dope_Header_Widget extends Widget_Base {
 			}
 
 			$items[] = array(
+				'_id'          => isset( $row['_id'] ) ? sanitize_key( $row['_id'] ) : '',
 				'social_label' => isset( $row['social_label'] ) ? sanitize_text_field( $row['social_label'] ) : '',
 				'social_icon'  => $icon,
 				'social_link'  => isset( $row['social_link'] ) && is_array( $row['social_link'] ) ? $row['social_link'] : array(),

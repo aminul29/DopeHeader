@@ -129,6 +129,17 @@
   line-height: 1;
 }
 
+.dh-topbar__social .elementor-screen-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  border: 0;
+}
+
 .dh-topbar__social:hover,
 .dh-topbar__social:focus-visible {
   filter: brightness(1.1);
