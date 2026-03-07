@@ -212,50 +212,88 @@ class Dope_Header_Widget extends Widget_Base {
 			)
 		);
 
-		$this->add_control(
-			'topbar_facebook_url',
+		$social_repeater = new Repeater();
+		$social_repeater->add_control(
+			'social_label',
 			array(
-				'label'         => esc_html__( 'Facebook URL', 'dope-header' ),
+				'label'       => esc_html__( 'Label', 'dope-header' ),
+				'type'        => Controls_Manager::TEXT,
+				'label_block' => true,
+				'default'     => esc_html__( 'Facebook', 'dope-header' ),
+			)
+		);
+
+		$social_repeater->add_control(
+			'social_icon',
+			array(
+				'label'   => esc_html__( 'Icon', 'dope-header' ),
+				'type'    => Controls_Manager::ICONS,
+				'default' => array(
+					'value'   => 'fab fa-facebook-f',
+					'library' => 'fa-brands',
+				),
+			)
+		);
+
+		$social_repeater->add_control(
+			'social_link',
+			array(
+				'label'         => esc_html__( 'Link', 'dope-header' ),
 				'type'          => Controls_Manager::URL,
 				'show_external' => true,
+				'label_block'   => true,
 				'default'       => array(
 					'url'         => '#',
 					'is_external' => true,
 					'nofollow'    => false,
-				),
-				'condition'     => array(
-					'show_topbar_socials' => 'yes',
 				),
 			)
 		);
 
 		$this->add_control(
-			'topbar_instagram_url',
+			'topbar_social_items',
 			array(
-				'label'         => esc_html__( 'Instagram URL', 'dope-header' ),
-				'type'          => Controls_Manager::URL,
-				'show_external' => true,
+				'label'       => esc_html__( 'Social Items', 'dope-header' ),
+				'type'        => Controls_Manager::REPEATER,
+				'fields'      => $social_repeater->get_controls(),
+				'title_field' => '{{{ social_label }}}',
 				'default'       => array(
-					'url'         => '#',
-					'is_external' => true,
-					'nofollow'    => false,
-				),
-				'condition'     => array(
-					'show_topbar_socials' => 'yes',
-				),
-			)
-		);
-
-		$this->add_control(
-			'topbar_whatsapp_url',
-			array(
-				'label'         => esc_html__( 'WhatsApp URL', 'dope-header' ),
-				'type'          => Controls_Manager::URL,
-				'show_external' => true,
-				'default'       => array(
-					'url'         => '#',
-					'is_external' => true,
-					'nofollow'    => false,
+					array(
+						'social_label' => esc_html__( 'Facebook', 'dope-header' ),
+						'social_icon'  => array(
+							'value'   => 'fab fa-facebook-f',
+							'library' => 'fa-brands',
+						),
+						'social_link'  => array(
+							'url'         => '#',
+							'is_external' => true,
+							'nofollow'    => false,
+						),
+					),
+					array(
+						'social_label' => esc_html__( 'Instagram', 'dope-header' ),
+						'social_icon'  => array(
+							'value'   => 'fab fa-instagram',
+							'library' => 'fa-brands',
+						),
+						'social_link'  => array(
+							'url'         => '#',
+							'is_external' => true,
+							'nofollow'    => false,
+						),
+					),
+					array(
+						'social_label' => esc_html__( 'WhatsApp', 'dope-header' ),
+						'social_icon'  => array(
+							'value'   => 'fab fa-whatsapp',
+							'library' => 'fa-brands',
+						),
+						'social_link'  => array(
+							'url'         => '#',
+							'is_external' => true,
+							'nofollow'    => false,
+						),
+					),
 				),
 				'condition'     => array(
 					'show_topbar_socials' => 'yes',
@@ -1046,10 +1084,11 @@ class Dope_Header_Widget extends Widget_Base {
 		$settings = $this->get_settings_for_display();
 
 		$topbar_items        = $this->get_topbar_items( $settings );
+		$topbar_social_items = $this->get_topbar_social_items( $settings );
 		$show_topbar         = $this->is_enabled( $settings, 'enable_topbar', true ) && ! empty( $topbar_items );
 		$show_topbar_arrows  = $this->is_enabled( $settings, 'topbar_show_arrows', true ) && count( $topbar_items ) > 1;
 		$topbar_autoplay     = $this->is_enabled( $settings, 'topbar_autoplay', true ) && count( $topbar_items ) > 1;
-		$show_topbar_socials = $this->is_enabled( $settings, 'show_topbar_socials', true );
+		$show_topbar_socials = $this->is_enabled( $settings, 'show_topbar_socials', true ) && ! empty( $topbar_social_items );
 
 		$mobile_enabled      = $this->is_enabled( $settings, 'enable_mobile_drawer', true );
 		$mobile_breakpoint   = $this->sanitize_int( $settings['mobile_breakpoint'] ?? 1024, 1024, 640 );
@@ -1127,9 +1166,9 @@ class Dope_Header_Widget extends Widget_Base {
 
 			if ( $show_topbar_socials ) {
 				echo '<div class="dh-topbar__socials">';
-				$this->render_topbar_social_icon( $settings, 'facebook' );
-				$this->render_topbar_social_icon( $settings, 'instagram' );
-				$this->render_topbar_social_icon( $settings, 'whatsapp' );
+				foreach ( $topbar_social_items as $social_item ) {
+					$this->render_topbar_social_icon( $social_item );
+				}
 				echo '</div>';
 			}
 
@@ -1254,25 +1293,30 @@ class Dope_Header_Widget extends Widget_Base {
 	/**
 	 * Renders a topbar social icon link.
 	 *
-	 * @param array  $settings Widget settings.
-	 * @param string $network  Social network key.
+	 * @param array $item Social repeater row.
 	 * @return void
 	 */
-	private function render_topbar_social_icon( array $settings, string $network ): void {
-		$setting_key       = 'topbar_' . $network . '_url';
-		$url               = $this->get_url_value( $settings[ $setting_key ] ?? array(), '#' );
-		$link_attributes   = $this->get_link_attributes( $settings[ $setting_key ] ?? array() );
-		$label             = ucfirst( $network );
-		$network_icon_html = $this->get_builtin_icon_svg( $network );
+	private function render_topbar_social_icon( array $item ): void {
+		$url             = $this->get_url_value( $item['social_link'] ?? array(), '#' );
+		$link_attributes = $this->get_link_attributes( $item['social_link'] ?? array() );
+		$label           = isset( $item['social_label'] ) ? sanitize_text_field( $item['social_label'] ) : esc_html__( 'Social link', 'dope-header' );
+		$icon_html       = $this->get_icon_html( $item['social_icon'] ?? array() );
+
+		if ( '' === $label ) {
+			$label = esc_html__( 'Social link', 'dope-header' );
+		}
+
+		if ( '' === $icon_html ) {
+			return;
+		}
 
 		printf(
-			'<a class="dh-topbar__social dh-topbar__social--%1$s" href="%2$s"%3$s%4$s>',
-			esc_attr( $network ),
+			'<a class="dh-topbar__social" href="%1$s"%2$s%3$s>',
 			esc_url( $url ),
 			isset( $link_attributes['target'] ) ? ' target="' . esc_attr( $link_attributes['target'] ) . '"' : '',
 			isset( $link_attributes['rel'] ) ? ' rel="' . esc_attr( $link_attributes['rel'] ) . '"' : ''
 		);
-		echo wp_kses( $network_icon_html, $this->get_allowed_svg_html() );
+		echo wp_kses( $icon_html, $this->get_allowed_svg_html() );
 		echo '<span class="screen-reader-text">' . esc_html( $label ) . '</span>';
 		echo '</a>';
 	}
@@ -1410,6 +1454,33 @@ class Dope_Header_Widget extends Widget_Base {
 	}
 
 	/**
+	 * Gets sanitized topbar social repeater items.
+	 *
+	 * @param array $settings Widget settings.
+	 * @return array<int, array<string, mixed>>
+	 */
+	private function get_topbar_social_items( array $settings ): array {
+		$items = array();
+		$raw   = isset( $settings['topbar_social_items'] ) && is_array( $settings['topbar_social_items'] ) ? $settings['topbar_social_items'] : array();
+
+		foreach ( $raw as $row ) {
+			$icon = isset( $row['social_icon'] ) && is_array( $row['social_icon'] ) ? $row['social_icon'] : array();
+
+			if ( empty( $icon['value'] ) ) {
+				continue;
+			}
+
+			$items[] = array(
+				'social_label' => isset( $row['social_label'] ) ? sanitize_text_field( $row['social_label'] ) : '',
+				'social_icon'  => $icon,
+				'social_link'  => isset( $row['social_link'] ) && is_array( $row['social_link'] ) ? $row['social_link'] : array(),
+			);
+		}
+
+		return $items;
+	}
+
+	/**
 	 * Gets inline chevron SVG markup.
 	 *
 	 * @param bool $left Whether to render the left-facing chevron.
@@ -1430,6 +1501,14 @@ class Dope_Header_Widget extends Widget_Base {
 	 */
 	private function get_allowed_svg_html(): array {
 		return array(
+			'i'      => array(
+				'class'       => true,
+				'aria-hidden' => true,
+			),
+			'span'   => array(
+				'class'       => true,
+				'aria-hidden' => true,
+			),
 			'svg'    => array(
 				'aria-hidden' => true,
 				'focusable'   => true,

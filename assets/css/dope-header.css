@@ -124,6 +124,11 @@
   height: 13px;
 }
 
+.dh-topbar__social i {
+  font-size: 13px;
+  line-height: 1;
+}
+
 .dh-topbar__social:hover,
 .dh-topbar__social:focus-visible {
   filter: brightness(1.1);
@@ -274,6 +279,12 @@
 .dh-language svg {
   width: 18px;
   height: 18px;
+}
+
+.dh-action i,
+.dh-language i {
+  font-size: 18px;
+  line-height: 1;
 }
 
 .dh-language {
