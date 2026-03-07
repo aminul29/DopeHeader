@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Dope Header for Elementor
  * Description: Elementor widget for a configurable header with topbar text carousel, navigation, and actions.
- * Version: 1.1.6
+ * Version: 1.1.7
  * Author: Aminul Islam
  * Text Domain: dope-header
  * Requires Plugins: elementor
@@ -16,7 +16,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'DOPE_HEADER_VERSION', '1.1.6' );
+define( 'DOPE_HEADER_VERSION', '1.1.7' );
 define( 'DOPE_HEADER_FILE', __FILE__ );
 define( 'DOPE_HEADER_PATH', __DIR__ );
 define( 'DOPE_HEADER_URL', plugin_dir_url( __FILE__ ) );
