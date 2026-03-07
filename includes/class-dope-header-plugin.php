@@ -64,7 +64,7 @@ final class Dope_Header_Plugin {
 
 		add_action( 'elementor/widgets/register', array( $this, 'register_widgets' ) );
 		add_action( 'wp_enqueue_scripts', array( $this, 'register_assets' ) );
-		add_action( 'elementor/editor/after_enqueue_scripts', array( $this, 'register_assets' ) );
+		add_action( 'elementor/editor/after_enqueue_scripts', array( $this, 'enqueue_editor_assets' ) );
 	}
 
 	/**
@@ -85,6 +85,16 @@ final class Dope_Header_Plugin {
 			DOPE_HEADER_VERSION,
 			true
 		);
+	}
+
+	/**
+	 * Enqueues editor assets used by the widget panel.
+	 *
+	 * @return void
+	 */
+	public function enqueue_editor_assets(): void {
+		$this->register_assets();
+		wp_enqueue_script( 'dope-header-widget' );
 	}
 
 	/**

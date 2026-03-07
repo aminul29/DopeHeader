@@ -297,6 +297,128 @@
     return null;
   }
 
+  function initEditorSectionDefaults() {
+    if (!window.elementor || !window.elementor.hooks) {
+      return false;
+    }
+
+    var targetSectionIds = [
+      'section_topbar',
+      'section_header',
+      'section_actions',
+      'section_mobile',
+      'section_style_topbar',
+      'section_style_nav',
+      'section_style_menu',
+      'section_style_actions',
+      'section_style_mobile'
+    ];
+    var collapseTimerIds = [];
+    var hasNavigationListener = false;
+
+    function clearCollapseTimers() {
+      collapseTimerIds.forEach(function (timerId) {
+        window.clearTimeout(timerId);
+      });
+
+      collapseTimerIds = [];
+    }
+
+    function getEditorPanelRoot() {
+      return document.querySelector('#elementor-panel-page-editor.elementor-controls-stack');
+    }
+
+    function setPanelControlsCollapsing(isCollapsing) {
+      var panelRoot = getEditorPanelRoot();
+      var controlsRoot = panelRoot ? panelRoot.querySelector('#elementor-controls') : null;
+      if (!controlsRoot) {
+        return;
+      }
+
+      controlsRoot.style.visibility = isCollapsing ? 'hidden' : '';
+      controlsRoot.style.pointerEvents = isCollapsing ? 'none' : '';
+    }
+
+    function getDopeHeaderPanelRoot() {
+      var panelRoot = getEditorPanelRoot();
+      if (!panelRoot) {
+        return null;
+      }
+
+      var hasTargetSection = targetSectionIds.some(function (sectionId) {
+        return !!panelRoot.querySelector('.elementor-control-' + sectionId);
+      });
+
+      return hasTargetSection ? panelRoot : null;
+    }
+
+    function collapseOpenTargetSections() {
+      var panelRoot = getDopeHeaderPanelRoot();
+      if (!panelRoot) {
+        return;
+      }
+
+      targetSectionIds.forEach(function (sectionId) {
+        var openSection = panelRoot.querySelector('.elementor-control-' + sectionId + '.e-open');
+        if (!openSection) {
+          return;
+        }
+
+        var heading = openSection.querySelector('.elementor-panel-heading');
+        if (heading) {
+          heading.click();
+        }
+      });
+    }
+
+    function scheduleCollapsePasses() {
+      clearCollapseTimers();
+      setPanelControlsCollapsing(true);
+
+      [0, 40, 120].forEach(function (delay) {
+        collapseTimerIds.push(
+          window.setTimeout(function () {
+            collapseOpenTargetSections();
+          }, delay)
+        );
+      });
+
+      collapseTimerIds.push(
+        window.setTimeout(function () {
+          setPanelControlsCollapsing(false);
+        }, 170)
+      );
+    }
+
+    window.elementor.hooks.addAction('panel/open_editor/widget/dope_header', function () {
+      setPanelControlsCollapsing(true);
+      scheduleCollapsePasses();
+    });
+
+    if (!hasNavigationListener) {
+      document.addEventListener('click', function (event) {
+        var navigationTab = event.target.closest('.elementor-panel-navigation-tab');
+        if (!navigationTab || !getDopeHeaderPanelRoot()) {
+          return;
+        }
+
+        setPanelControlsCollapsing(true);
+
+        window.setTimeout(function () {
+          if (getDopeHeaderPanelRoot()) {
+            scheduleCollapsePasses();
+          } else {
+            setPanelControlsCollapsing(false);
+          }
+        }, 0);
+      });
+
+      hasNavigationListener = true;
+    }
+
+    return true;
+  }
+
   if (window.elementorFrontend && window.elementorFrontend.hooks) {
     window.elementorFrontend.hooks.addAction('frontend/element_ready/dope_header.default', function ($scope) {
       var scopeElement = getScopeElement($scope);
@@ -311,4 +433,10 @@
   document.addEventListener('DOMContentLoaded', function () {
     initScope(document, false);
   });
+
+  if (!initEditorSectionDefaults()) {
+    document.addEventListener('DOMContentLoaded', function () {
+      initEditorSectionDefaults();
+    });
+  }
 })();
