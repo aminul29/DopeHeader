@@ -147,12 +147,12 @@
 
 .dh-main {
   background: #050505;
-  border-bottom: 1px solid #ffffff;
 }
 
 .dh-main__inner {
   width: min(var(--dh-shell-max-width), 100%);
   min-height: var(--dh-main-height);
+  border-bottom: 1px solid #ffffff;
   padding-left: calc(var(--dh-logo-width) + 20px);
   padding-right: 16px;
   display: grid;

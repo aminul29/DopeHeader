@@ -404,54 +404,111 @@ class Dope_Header_Widget extends Widget_Base {
 			)
 		);
 
-		$this->register_action_controls(
-			'search',
-			esc_html__( 'Search', 'dope-header' ),
+		$actions_repeater = new Repeater();
+		$actions_repeater->add_control(
+			'action_label',
 			array(
-				'value'   => 'fas fa-magnifying-glass',
-				'library' => 'fa-solid',
-			)
-		);
-
-		$this->register_action_controls(
-			'account',
-			esc_html__( 'Account', 'dope-header' ),
-			array(
-				'value'   => 'far fa-user',
-				'library' => 'fa-regular',
-			)
-		);
-
-		$this->register_action_controls(
-			'cart',
-			esc_html__( 'Cart', 'dope-header' ),
-			array(
-				'value'   => 'fas fa-cart-shopping',
-				'library' => 'fa-solid',
-			)
-		);
-
-		$this->add_control(
-			'language_label',
-			array(
-				'label'       => esc_html__( 'Language Label', 'dope-header' ),
+				'label'       => esc_html__( 'Label', 'dope-header' ),
 				'type'        => Controls_Manager::TEXT,
 				'label_block' => true,
-				'default'     => 'ENG',
+				'default'     => esc_html__( 'Search', 'dope-header' ),
 			)
 		);
 
-		$this->add_control(
-			'language_link',
+		$actions_repeater->add_control(
+			'action_link',
 			array(
-				'label'         => esc_html__( 'Language Link', 'dope-header' ),
+				'label'         => esc_html__( 'Link', 'dope-header' ),
 				'type'          => Controls_Manager::URL,
 				'show_external' => false,
+				'label_block'   => true,
 				'default'       => array(
 					'url'         => '#',
 					'is_external' => false,
 					'nofollow'    => false,
 				),
+			)
+		);
+
+		$actions_repeater->add_control(
+			'action_icon',
+			array(
+				'label'   => esc_html__( 'Icon', 'dope-header' ),
+				'type'    => Controls_Manager::ICONS,
+				'default' => array(
+					'value'   => 'fas fa-magnifying-glass',
+					'library' => 'fa-solid',
+				),
+			)
+		);
+
+		$this->add_control(
+			'action_items',
+			array(
+				'label'       => esc_html__( 'Action Items', 'dope-header' ),
+				'type'        => Controls_Manager::REPEATER,
+				'fields'      => $actions_repeater->get_controls(),
+				'title_field' => '{{{ action_label }}}',
+				'default'     => array(
+					array(
+						'action_label' => esc_html__( 'Search', 'dope-header' ),
+						'action_link'  => array(
+							'url'         => '#',
+							'is_external' => false,
+							'nofollow'    => false,
+						),
+						'action_icon'  => array(
+							'value'   => 'fas fa-magnifying-glass',
+							'library' => 'fa-solid',
+						),
+					),
+					array(
+						'action_label' => esc_html__( 'Account', 'dope-header' ),
+						'action_link'  => array(
+							'url'         => '#',
+							'is_external' => false,
+							'nofollow'    => false,
+						),
+						'action_icon'  => array(
+							'value'   => 'far fa-user',
+							'library' => 'fa-regular',
+						),
+					),
+					array(
+						'action_label' => esc_html__( 'Cart', 'dope-header' ),
+						'action_link'  => array(
+							'url'         => '#',
+							'is_external' => false,
+							'nofollow'    => false,
+						),
+						'action_icon'  => array(
+							'value'   => 'fas fa-cart-shopping',
+							'library' => 'fa-solid',
+						),
+					),
+				),
+			)
+		);
+
+		$this->add_control(
+			'show_language_menu',
+			array(
+				'label'        => esc_html__( 'Show Language Menu', 'dope-header' ),
+				'type'         => Controls_Manager::SWITCHER,
+				'return_value' => 'yes',
+				'default'      => 'no',
+			)
+		);
+
+		$this->add_control(
+			'language_menu_id',
+			array(
+				'label'       => esc_html__( 'Language Menu', 'dope-header' ),
+				'type'        => Controls_Manager::SELECT,
+				'options'     => $this->get_menu_options(),
+				'default'     => '',
+				'description' => esc_html__( 'The first top-level item from the selected menu will be used as the language label and link.', 'dope-header' ),
+				'condition'   => array( 'show_language_menu' => 'yes' ),
 			)
 		);
 
@@ -462,6 +519,7 @@ class Dope_Header_Widget extends Widget_Base {
 				'type'         => Controls_Manager::SWITCHER,
 				'return_value' => 'yes',
 				'default'      => 'yes',
+				'condition'    => array( 'show_language_menu' => 'yes' ),
 			)
 		);
 
@@ -474,59 +532,14 @@ class Dope_Header_Widget extends Widget_Base {
 					'value'   => 'fas fa-chevron-down',
 					'library' => 'fa-solid',
 				),
-				'condition' => array( 'show_language_chevron' => 'yes' ),
+				'condition' => array(
+					'show_language_menu'    => 'yes',
+					'show_language_chevron' => 'yes',
+				),
 			)
 		);
 
 		$this->end_controls_section();
-	}
-
-	/**
-	 * Registers controls for a single header action.
-	 *
-	 * @param string $key          Action setting key.
-	 * @param string $label        Action label.
-	 * @param array  $default_icon Default icon control value.
-	 * @return void
-	 */
-	private function register_action_controls( string $key, string $label, array $default_icon ): void {
-		$this->add_control(
-			'show_' . $key . '_action',
-			array(
-				/* translators: %s: header action label. */
-				'label'        => sprintf( esc_html__( 'Show %s', 'dope-header' ), $label ),
-				'type'         => Controls_Manager::SWITCHER,
-				'return_value' => 'yes',
-				'default'      => 'yes',
-			)
-		);
-
-		$this->add_control(
-			$key . '_action_link',
-			array(
-				/* translators: %s: header action label. */
-				'label'         => sprintf( esc_html__( '%s Link', 'dope-header' ), $label ),
-				'type'          => Controls_Manager::URL,
-				'show_external' => false,
-				'default'       => array(
-					'url'         => '#',
-					'is_external' => false,
-					'nofollow'    => false,
-				),
-				'condition'     => array( 'show_' . $key . '_action' => 'yes' ),
-			)
-		);
-
-		$this->add_control(
-			$key . '_action_icon',
-			array(
-				/* translators: %s: header action label. */
-				'label'     => sprintf( esc_html__( '%s Icon', 'dope-header' ), $label ),
-				'type'      => Controls_Manager::ICONS,
-				'default'   => $default_icon,
-				'condition' => array( 'show_' . $key . '_action' => 'yes' ),
-			)
-		);
 	}
 
 	/**
@@ -829,7 +842,7 @@ class Dope_Header_Widget extends Widget_Base {
 				'type'      => Controls_Manager::COLOR,
 				'default'   => '#ffffff',
 				'selectors' => array(
-					'{{WRAPPER}} .dh-main' => 'border-bottom-color: {{VALUE}};',
+					'{{WRAPPER}} .dh-main__inner' => 'border-bottom-color: {{VALUE}};',
 				),
 			)
 		);
@@ -1420,17 +1433,33 @@ class Dope_Header_Widget extends Widget_Base {
 	 * @return void
 	 */
 	private function render_actions( array $settings ): void {
-		$this->render_single_action( $settings, 'search', esc_html__( 'Search', 'dope-header' ) );
-		$this->render_single_action( $settings, 'account', esc_html__( 'Account', 'dope-header' ) );
-		$this->render_single_action( $settings, 'cart', esc_html__( 'Cart', 'dope-header' ) );
+		$action_items = $this->get_action_items( $settings );
 
-		$language_label      = isset( $settings['language_label'] ) ? sanitize_text_field( $settings['language_label'] ) : 'ENG';
-		$language_url        = $this->get_url_value( $settings['language_link'] ?? array(), '#' );
-		$language_attributes = $this->get_link_attributes( $settings['language_link'] ?? array() );
+		foreach ( $action_items as $action_item ) {
+			$this->render_single_action( $action_item );
+		}
+
+		if ( ! $this->is_enabled( $settings, 'show_language_menu', true ) ) {
+			return;
+		}
+
+		$language_menu_id   = isset( $settings['language_menu_id'] ) ? absint( $settings['language_menu_id'] ) : 0;
+		$language_menu_item = $this->get_language_menu_item( $language_menu_id );
+
+		if ( ! $language_menu_item ) {
+			if ( $this->is_editor_mode() ) {
+				echo '<span class="dh-language dh-language--placeholder">' . esc_html__( 'Select a language menu', 'dope-header' ) . '</span>';
+			}
+			return;
+		}
+
+		$language_label      = sanitize_text_field( $language_menu_item->title );
+		$language_url        = ! empty( $language_menu_item->url ) ? esc_url( $language_menu_item->url ) : '#';
+		$language_attributes = $this->get_menu_item_link_attributes( $language_menu_item );
 
 		printf(
 			'<a class="dh-language" href="%1$s"%2$s%3$s><span class="dh-language__label">%4$s</span>',
-			esc_url( $language_url ),
+			$language_url,
 			isset( $language_attributes['target'] ) ? ' target="' . esc_attr( $language_attributes['target'] ) . '"' : '',
 			isset( $language_attributes['rel'] ) ? ' rel="' . esc_attr( $language_attributes['rel'] ) . '"' : '',
 			esc_html( $language_label )
@@ -1452,23 +1481,21 @@ class Dope_Header_Widget extends Widget_Base {
 	/**
 	 * Renders a single header action link.
 	 *
-	 * @param array  $settings Widget settings.
-	 * @param string $key      Action key.
-	 * @param string $label    Action label.
+	 * @param array $item Action repeater row.
 	 * @return void
 	 */
-	private function render_single_action( array $settings, string $key, string $label ): void {
-		if ( ! $this->is_enabled( $settings, 'show_' . $key . '_action', true ) ) {
+	private function render_single_action( array $item ): void {
+		$label            = isset( $item['action_label'] ) ? sanitize_text_field( $item['action_label'] ) : esc_html__( 'Action', 'dope-header' );
+		$url              = $this->get_url_value( $item['action_link'] ?? array(), '#' );
+		$link_attributes  = $this->get_link_attributes( $item['action_link'] ?? array() );
+		$action_icon_html = $this->get_action_icon_html( $item['action_icon'] ?? array() );
+
+		if ( '' === $action_icon_html ) {
 			return;
 		}
 
-		$url              = $this->get_url_value( $settings[ $key . '_action_link' ] ?? array(), '#' );
-		$link_attributes  = $this->get_link_attributes( $settings[ $key . '_action_link' ] ?? array() );
-		$action_icon_html = $this->get_action_icon_html( $settings, $key );
-
 		printf(
-			'<a class="dh-action dh-action--%1$s" href="%2$s"%3$s%4$s>',
-			esc_attr( $key ),
+			'<a class="dh-action" href="%1$s"%2$s%3$s>',
 			esc_url( $url ),
 			isset( $link_attributes['target'] ) ? ' target="' . esc_attr( $link_attributes['target'] ) . '"' : '',
 			isset( $link_attributes['rel'] ) ? ' rel="' . esc_attr( $link_attributes['rel'] ) . '"' : ''
@@ -1556,18 +1583,17 @@ class Dope_Header_Widget extends Widget_Base {
 	/**
 	 * Gets the markup for a configured action icon.
 	 *
-	 * @param array  $settings Widget settings.
-	 * @param string $key      Action key.
+	 * @param array $icon Icon control value.
 	 * @return string
 	 */
-	private function get_action_icon_html( array $settings, string $key ): string {
-		$icon_html = $this->get_icon_html( $settings[ $key . '_action_icon' ] ?? array() );
+	private function get_action_icon_html( array $icon ): string {
+		$icon_html = $this->get_fontawesome_icon_html( $icon );
 
-		if ( '' !== $icon_html && false !== strpos( strtolower( $icon_html ), '<svg' ) ) {
+		if ( '' !== $icon_html ) {
 			return $icon_html;
 		}
 
-		return $this->get_builtin_icon_svg( $key );
+		return '';
 	}
 
 	/**
@@ -1644,6 +1670,37 @@ class Dope_Header_Widget extends Widget_Base {
 	}
 
 	/**
+	 * Gets the first top-level item from a selected language menu.
+	 *
+	 * @param int $menu_id WordPress menu term ID.
+	 * @return object|null
+	 */
+	private function get_language_menu_item( int $menu_id ) {
+		if ( $menu_id <= 0 ) {
+			return null;
+		}
+
+		$items = wp_get_nav_menu_items(
+			$menu_id,
+			array(
+				'update_post_term_cache' => false,
+			)
+		);
+
+		if ( ! is_array( $items ) ) {
+			return null;
+		}
+
+		foreach ( $items as $item ) {
+			if ( isset( $item->menu_item_parent ) && 0 === (int) $item->menu_item_parent ) {
+				return $item;
+			}
+		}
+
+		return null;
+	}
+
+	/**
 	 * Gets available WordPress navigation menus for the control.
 	 *
 	 * @return array<string, string>
@@ -1707,6 +1764,33 @@ class Dope_Header_Widget extends Widget_Base {
 				'social_label' => isset( $row['social_label'] ) ? sanitize_text_field( $row['social_label'] ) : '',
 				'social_icon'  => $icon,
 				'social_link'  => isset( $row['social_link'] ) && is_array( $row['social_link'] ) ? $row['social_link'] : array(),
+			);
+		}
+
+		return $items;
+	}
+
+	/**
+	 * Gets sanitized action repeater items.
+	 *
+	 * @param array $settings Widget settings.
+	 * @return array<int, array<string, mixed>>
+	 */
+	private function get_action_items( array $settings ): array {
+		$items = array();
+		$raw   = isset( $settings['action_items'] ) && is_array( $settings['action_items'] ) ? $settings['action_items'] : array();
+
+		foreach ( $raw as $row ) {
+			$icon = isset( $row['action_icon'] ) && is_array( $row['action_icon'] ) ? $row['action_icon'] : array();
+
+			if ( empty( $icon['value'] ) ) {
+				continue;
+			}
+
+			$items[] = array(
+				'action_label' => isset( $row['action_label'] ) ? sanitize_text_field( $row['action_label'] ) : '',
+				'action_link'  => isset( $row['action_link'] ) && is_array( $row['action_link'] ) ? $row['action_link'] : array(),
+				'action_icon'  => $icon,
 			);
 		}
 
@@ -1885,6 +1969,36 @@ class Dope_Header_Widget extends Widget_Base {
 			if ( ! empty( $url_control['nofollow'] ) ) {
 				$rel_parts[] = 'nofollow';
 			}
+		}
+
+		if ( ! empty( $rel_parts ) ) {
+			$attributes['rel'] = implode( ' ', array_unique( $rel_parts ) );
+		}
+
+		return $attributes;
+	}
+
+	/**
+	 * Builds link attributes from a WordPress menu item object.
+	 *
+	 * @param object $menu_item WordPress menu item object.
+	 * @return array<string, string>
+	 */
+	private function get_menu_item_link_attributes( $menu_item ): array {
+		$attributes = array();
+		$rel_parts  = array();
+
+		if ( ! empty( $menu_item->target ) ) {
+			$attributes['target'] = sanitize_text_field( $menu_item->target );
+		}
+
+		if ( ! empty( $menu_item->xfn ) ) {
+			$rel_parts[] = sanitize_text_field( $menu_item->xfn );
+		}
+
+		if ( isset( $attributes['target'] ) && '_blank' === $attributes['target'] ) {
+			$rel_parts[] = 'noopener';
+			$rel_parts[] = 'noreferrer';
 		}
 
 		if ( ! empty( $rel_parts ) ) {
