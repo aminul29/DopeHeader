@@ -11,11 +11,152 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 use Elementor\Controls_Manager;
 use Elementor\Group_Control_Border;
+use Elementor\Group_Control_Box_Shadow;
 use Elementor\Group_Control_Typography;
 use Elementor\Icons_Manager;
 use Elementor\Repeater;
 use Elementor\Utils;
 use Elementor\Widget_Base;
+
+if ( class_exists( 'Walker_Nav_Menu' ) && ! class_exists( 'Dope_Header_Mobile_Menu_Walker' ) ) {
+	/**
+	 * Mobile menu walker with submenu toggles for the drawer.
+	 */
+	class Dope_Header_Mobile_Menu_Walker extends Walker_Nav_Menu {
+		/**
+		 * Prefix used to keep submenu ids unique per widget instance.
+		 *
+		 * @var string
+		 */
+		private $submenu_prefix = '';
+
+		/**
+		 * Tracks submenu ids by depth while walking.
+		 *
+		 * @var array<int, string>
+		 */
+		private $submenu_ids = array();
+
+		/**
+		 * Constructor.
+		 *
+		 * @param string $submenu_prefix Prefix for submenu ids.
+		 */
+		public function __construct( string $submenu_prefix ) {
+			$this->submenu_prefix = sanitize_html_class( $submenu_prefix );
+		}
+
+		/**
+		 * Starts a submenu level.
+		 *
+		 * @param string   $output Used to append additional content.
+		 * @param int      $depth  Menu depth.
+		 * @param stdClass $args   An object of wp_nav_menu() arguments.
+		 * @return void
+		 */
+		public function start_lvl( &$output, $depth = 0, $args = null ): void {
+			$indent     = str_repeat( "\t", $depth );
+			$submenu_id = isset( $this->submenu_ids[ $depth ] ) ? $this->submenu_ids[ $depth ] : '';
+			$id_attr    = '' !== $submenu_id ? ' id="' . esc_attr( $submenu_id ) . '"' : '';
+
+			$output .= "\n$indent<ul$id_attr class=\"sub-menu\" data-dh-submenu hidden>\n";
+		}
+
+		/**
+		 * Ends a submenu level.
+		 *
+		 * @param string   $output Used to append additional content.
+		 * @param int      $depth  Menu depth.
+		 * @param stdClass $args   An object of wp_nav_menu() arguments.
+		 * @return void
+		 */
+		public function end_lvl( &$output, $depth = 0, $args = null ): void {
+			$indent = str_repeat( "\t", $depth );
+			unset( $this->submenu_ids[ $depth ] );
+			$output .= "$indent</ul>\n";
+		}
+
+		/**
+		 * Starts the element output.
+		 *
+		 * @param string   $output            Used to append additional content.
+		 * @param WP_Post  $item              Menu item data object.
+		 * @param int      $depth             Depth of menu item.
+		 * @param stdClass $args              An object of wp_nav_menu() arguments.
+		 * @param int      $current_object_id Current item id.
+		 * @return void
+		 */
+		public function start_el( &$output, $item, $depth = 0, $args = null, $current_object_id = 0 ): void {
+			$indent            = $depth ? str_repeat( "\t", $depth ) : '';
+			$classes           = empty( $item->classes ) ? array() : (array) $item->classes;
+			$has_children      = in_array( 'menu-item-has-children', $classes, true );
+			$submenu_id        = $has_children ? $this->submenu_prefix . '-submenu-' . absint( $item->ID ) : '';
+			$sanitized_classes = array_filter(
+				array_map(
+					'sanitize_html_class',
+					$classes
+				)
+			);
+
+			if ( $has_children ) {
+				$sanitized_classes[]    = 'has-dropdown';
+				$this->submenu_ids[ $depth ] = $submenu_id;
+			}
+
+			$output .= $indent . '<li class="' . esc_attr( implode( ' ', array_unique( $sanitized_classes ) ) ) . '">';
+
+			$link_attributes = array(
+				'title'  => ! empty( $item->attr_title ) ? $item->attr_title : '',
+				'target' => ! empty( $item->target ) ? $item->target : '',
+				'rel'    => ! empty( $item->xfn ) ? $item->xfn : '',
+				'href'   => ! empty( $item->url ) ? $item->url : '',
+			);
+
+			$link_output = '';
+			foreach ( $link_attributes as $attribute => $value ) {
+				if ( '' === $value ) {
+					continue;
+				}
+
+				$escaped_value = 'href' === $attribute ? esc_url( $value ) : esc_attr( $value );
+				$link_output  .= ' ' . $attribute . '="' . $escaped_value . '"';
+			}
+
+			$title = apply_filters( 'the_title', $item->title, $item->ID );
+			$title = apply_filters( 'nav_menu_item_title', $title, $item, $args, $depth );
+
+			if ( $has_children ) {
+				$output .= '<div class="dh-mobile-menu__row">';
+			}
+
+			$output .= '<a' . $link_output . '>' . esc_html( $title ) . '</a>';
+
+			if ( $has_children ) {
+				$toggle_label = sprintf(
+					/* translators: %s: menu item label. */
+					__( 'Toggle submenu for %s', 'dope-header' ),
+					wp_strip_all_tags( $title )
+				);
+
+				$output .= '<button type="button" class="dh-mobile-submenu-toggle" data-dh-submenu-toggle aria-expanded="false" aria-controls="' . esc_attr( $submenu_id ) . '" aria-label="' . esc_attr( $toggle_label ) . '"><span class="dh-mobile-submenu-toggle__icon" aria-hidden="true"></span></button>';
+				$output .= '</div>';
+			}
+		}
+
+		/**
+		 * Ends the element output.
+		 *
+		 * @param string   $output Used to append additional content.
+		 * @param WP_Post  $item   Menu item data object.
+		 * @param int      $depth  Depth of menu item.
+		 * @param stdClass $args   An object of wp_nav_menu() arguments.
+		 * @return void
+		 */
+		public function end_el( &$output, $item, $depth = 0, $args = null ): void {
+			$output .= "</li>\n";
+		}
+	}
+}
 
 /**
  * Elementor widget implementation for the Dope Header plugin.
@@ -111,8 +252,11 @@ class Dope_Header_Widget extends Widget_Base {
 		$this->start_controls_section(
 			'section_topbar',
 			array(
-				'label' => esc_html__( 'Announcement Bar', 'dope-header' ),
-				'tab'   => Controls_Manager::TAB_CONTENT,
+				'label'     => esc_html__( 'Announcement Bar', 'dope-header' ),
+				'tab'       => Controls_Manager::TAB_CONTENT,
+				'condition' => array(
+					'header_layout' => 'default',
+				),
 			)
 		);
 
@@ -381,6 +525,34 @@ class Dope_Header_Widget extends Widget_Base {
 		);
 
 		$this->add_control(
+			'header_layout_heading',
+			array(
+				'label' => esc_html__( 'Header Layout', 'dope-header' ),
+				'type'  => Controls_Manager::HEADING,
+			)
+		);
+
+		$this->add_control(
+			'header_layout',
+			array(
+				'label'   => esc_html__( 'Layout', 'dope-header' ),
+				'type'    => Controls_Manager::SELECT,
+				'default' => 'default',
+				'options' => array(
+					'default' => esc_html__( 'Default', 'dope-header' ),
+					'minimal' => esc_html__( 'Minimal', 'dope-header' ),
+				),
+			)
+		);
+
+		$this->add_control(
+			'header_brand_divider',
+			array(
+				'type' => Controls_Manager::DIVIDER,
+			)
+		);
+
+		$this->add_control(
 			'header_brand_heading',
 			array(
 				'label' => esc_html__( 'Branding', 'dope-header' ),
@@ -479,6 +651,103 @@ class Dope_Header_Widget extends Widget_Base {
 				'return_value' => 'yes',
 				'default'      => '',
 				'description'  => esc_html__( 'Places the header above the next section, useful for hero overlays.', 'dope-header' ),
+				'condition'    => array(
+					'header_layout' => 'default',
+				),
+			)
+		);
+
+		$this->add_control(
+			'minimal_sticky_divider',
+			array(
+				'type'      => Controls_Manager::DIVIDER,
+				'condition' => array(
+					'header_layout' => 'minimal',
+				),
+			)
+		);
+
+		$this->add_control(
+			'minimal_sticky_heading',
+			array(
+				'label'     => esc_html__( 'Sticky Behavior', 'dope-header' ),
+				'type'      => Controls_Manager::HEADING,
+				'condition' => array(
+					'header_layout' => 'minimal',
+				),
+			)
+		);
+
+		$this->add_control(
+			'enable_sticky_header',
+			array(
+				'label'        => esc_html__( 'Stick Header to Top', 'dope-header' ),
+				'type'         => Controls_Manager::SWITCHER,
+				'return_value' => 'yes',
+				'default'      => 'yes',
+				'condition'    => array(
+					'header_layout' => 'minimal',
+				),
+			)
+		);
+
+		$this->add_control(
+			'enable_header_shrink',
+			array(
+				'label'        => esc_html__( 'Shrink Header on Scroll', 'dope-header' ),
+				'type'         => Controls_Manager::SWITCHER,
+				'return_value' => 'yes',
+				'default'      => 'yes',
+				'condition'    => array(
+					'header_layout'       => 'minimal',
+					'enable_sticky_header' => 'yes',
+				),
+			)
+		);
+
+		$this->add_control(
+			'sticky_scroll_threshold',
+			array(
+				'label'     => esc_html__( 'Shrink Threshold (px)', 'dope-header' ),
+				'type'      => Controls_Manager::NUMBER,
+				'default'   => 24,
+				'min'       => 0,
+				'step'      => 1,
+				'condition' => array(
+					'header_layout'        => 'minimal',
+					'enable_sticky_header' => 'yes',
+					'enable_header_shrink' => 'yes',
+				),
+			)
+		);
+
+		$this->add_control(
+			'minimal_header_height',
+			array(
+				'label'     => esc_html__( 'Header Height (px)', 'dope-header' ),
+				'type'      => Controls_Manager::NUMBER,
+				'default'   => 92,
+				'min'       => 48,
+				'step'      => 1,
+				'condition' => array(
+					'header_layout' => 'minimal',
+				),
+			)
+		);
+
+		$this->add_control(
+			'minimal_header_height_scrolled',
+			array(
+				'label'     => esc_html__( 'Scrolled Header Height (px)', 'dope-header' ),
+				'type'      => Controls_Manager::NUMBER,
+				'default'   => 72,
+				'min'       => 40,
+				'step'      => 1,
+				'condition' => array(
+					'header_layout'        => 'minimal',
+					'enable_sticky_header' => 'yes',
+					'enable_header_shrink' => 'yes',
+				),
 			)
 		);
 
@@ -502,8 +771,11 @@ class Dope_Header_Widget extends Widget_Base {
 		$this->add_control(
 			'actions_items_heading',
 			array(
-				'label' => esc_html__( 'Utility Icons', 'dope-header' ),
-				'type'  => Controls_Manager::HEADING,
+				'label'     => esc_html__( 'Utility Icons', 'dope-header' ),
+				'type'      => Controls_Manager::HEADING,
+				'condition' => array(
+					'header_layout' => 'default',
+				),
 			)
 		);
 
@@ -590,21 +862,30 @@ class Dope_Header_Widget extends Widget_Base {
 						),
 					),
 				),
+				'condition'   => array(
+					'header_layout' => 'default',
+				),
 			)
 		);
 
 		$this->add_control(
 			'actions_language_divider_content',
 			array(
-				'type' => Controls_Manager::DIVIDER,
+				'type'      => Controls_Manager::DIVIDER,
+				'condition' => array(
+					'header_layout' => 'default',
+				),
 			)
 		);
 
 		$this->add_control(
 			'actions_language_heading_content',
 			array(
-				'label' => esc_html__( 'Language Selector', 'dope-header' ),
-				'type'  => Controls_Manager::HEADING,
+				'label'     => esc_html__( 'Language Selector', 'dope-header' ),
+				'type'      => Controls_Manager::HEADING,
+				'condition' => array(
+					'header_layout' => 'default',
+				),
 			)
 		);
 
@@ -615,6 +896,9 @@ class Dope_Header_Widget extends Widget_Base {
 				'type'         => Controls_Manager::SWITCHER,
 				'return_value' => 'yes',
 				'default'      => 'no',
+				'condition'    => array(
+					'header_layout' => 'default',
+				),
 			)
 		);
 
@@ -626,7 +910,10 @@ class Dope_Header_Widget extends Widget_Base {
 				'options'     => $this->get_menu_options(),
 				'default'     => '',
 				'description' => esc_html__( 'The first top-level item from the selected menu will be used as the language label and link.', 'dope-header' ),
-				'condition'   => array( 'show_language_menu' => 'yes' ),
+				'condition'   => array(
+					'header_layout'     => 'default',
+					'show_language_menu' => 'yes',
+				),
 			)
 		);
 
@@ -637,7 +924,10 @@ class Dope_Header_Widget extends Widget_Base {
 				'type'         => Controls_Manager::SWITCHER,
 				'return_value' => 'yes',
 				'default'      => 'yes',
-				'condition'    => array( 'show_language_menu' => 'yes' ),
+				'condition'    => array(
+					'header_layout'     => 'default',
+					'show_language_menu' => 'yes',
+				),
 			)
 		);
 
@@ -651,8 +941,60 @@ class Dope_Header_Widget extends Widget_Base {
 					'library' => 'fa-solid',
 				),
 				'condition' => array(
+					'header_layout'        => 'default',
 					'show_language_menu'    => 'yes',
 					'show_language_chevron' => 'yes',
+				),
+			)
+		);
+
+		$this->add_control(
+			'minimal_cta_divider',
+			array(
+				'type'      => Controls_Manager::DIVIDER,
+				'condition' => array(
+					'header_layout' => 'minimal',
+				),
+			)
+		);
+
+		$this->add_control(
+			'minimal_cta_heading',
+			array(
+				'label'     => esc_html__( 'Call to Action Button', 'dope-header' ),
+				'type'      => Controls_Manager::HEADING,
+				'condition' => array(
+					'header_layout' => 'minimal',
+				),
+			)
+		);
+
+		$this->add_control(
+			'cta_button_text',
+			array(
+				'label'       => esc_html__( 'Button Text', 'dope-header' ),
+				'type'        => Controls_Manager::TEXT,
+				'label_block' => true,
+				'default'     => esc_html__( 'Contact', 'dope-header' ),
+				'condition'   => array(
+					'header_layout' => 'minimal',
+				),
+			)
+		);
+
+		$this->add_control(
+			'cta_button_link',
+			array(
+				'label'         => esc_html__( 'Button Link', 'dope-header' ),
+				'type'          => Controls_Manager::URL,
+				'show_external' => false,
+				'default'       => array(
+					'url'         => '#',
+					'is_external' => false,
+					'nofollow'    => false,
+				),
+				'condition'     => array(
+					'header_layout' => 'minimal',
 				),
 			)
 		);
@@ -716,6 +1058,33 @@ class Dope_Header_Widget extends Widget_Base {
 			)
 		);
 
+		$this->add_control(
+			'enable_mobile_submenus',
+			array(
+				'label'        => esc_html__( 'Enable Dropdown Submenus', 'dope-header' ),
+				'type'         => Controls_Manager::SWITCHER,
+				'return_value' => 'yes',
+				'default'      => 'yes',
+				'condition'    => array( 'enable_mobile_drawer' => 'yes' ),
+			)
+		);
+
+		$this->add_control(
+			'mobile_menu_mode',
+			array(
+				'label'       => esc_html__( 'Mobile Menu Presentation', 'dope-header' ),
+				'type'        => Controls_Manager::SELECT,
+				'default'     => '',
+				'options'     => array(
+					''         => esc_html__( 'Use Layout Default', 'dope-header' ),
+					'drawer'   => esc_html__( 'Sidebar Drawer', 'dope-header' ),
+					'dropdown' => esc_html__( 'Dropdown Panel', 'dope-header' ),
+				),
+				'description' => esc_html__( 'Default layout uses sidebar drawer. Minimal layout uses dropdown panel by default.', 'dope-header' ),
+				'condition'   => array( 'enable_mobile_drawer' => 'yes' ),
+			)
+		);
+
 		$this->end_controls_section();
 	}
 
@@ -729,6 +1098,7 @@ class Dope_Header_Widget extends Widget_Base {
 		$this->register_style_nav_controls();
 		$this->register_style_menu_controls();
 		$this->register_style_actions_controls();
+		$this->register_style_minimal_controls();
 		$this->register_style_mobile_controls();
 	}
 
@@ -741,8 +1111,11 @@ class Dope_Header_Widget extends Widget_Base {
 		$this->start_controls_section(
 			'section_style_topbar',
 			array(
-				'label' => esc_html__( 'Topbar', 'dope-header' ),
-				'tab'   => Controls_Manager::TAB_STYLE,
+				'label'     => esc_html__( 'Topbar', 'dope-header' ),
+				'tab'       => Controls_Manager::TAB_STYLE,
+				'condition' => array(
+					'header_layout' => 'default',
+				),
 			)
 		);
 
@@ -949,8 +1322,11 @@ class Dope_Header_Widget extends Widget_Base {
 		$this->start_controls_section(
 			'section_style_nav',
 			array(
-				'label' => esc_html__( 'Navigation Row', 'dope-header' ),
-				'tab'   => Controls_Manager::TAB_STYLE,
+				'label'     => esc_html__( 'Navigation Row', 'dope-header' ),
+				'tab'       => Controls_Manager::TAB_STYLE,
+				'condition' => array(
+					'header_layout' => 'default',
+				),
 			)
 		);
 
@@ -1063,8 +1439,11 @@ class Dope_Header_Widget extends Widget_Base {
 		$this->start_controls_section(
 			'section_style_menu',
 			array(
-				'label' => esc_html__( 'Menu Links', 'dope-header' ),
-				'tab'   => Controls_Manager::TAB_STYLE,
+				'label'     => esc_html__( 'Menu Links', 'dope-header' ),
+				'tab'       => Controls_Manager::TAB_STYLE,
+				'condition' => array(
+					'header_layout' => 'default',
+				),
 			)
 		);
 
@@ -1080,7 +1459,7 @@ class Dope_Header_Widget extends Widget_Base {
 			Group_Control_Typography::get_type(),
 			array(
 				'name'     => 'menu_typography',
-				'selector' => '{{WRAPPER}} .dh-menu > li > a',
+				'selector' => '{{WRAPPER}} .dh-widget--layout-default .dh-menu > li > a',
 			)
 		);
 
@@ -1106,7 +1485,7 @@ class Dope_Header_Widget extends Widget_Base {
 				'type'      => Controls_Manager::COLOR,
 				'default'   => '#ffffff',
 				'selectors' => array(
-					'{{WRAPPER}} .dh-menu > li > a' => 'color: {{VALUE}};',
+					'{{WRAPPER}} .dh-widget--layout-default .dh-menu > li > a' => 'color: {{VALUE}};',
 				),
 			)
 		);
@@ -1118,7 +1497,7 @@ class Dope_Header_Widget extends Widget_Base {
 				'type'      => Controls_Manager::COLOR,
 				'default'   => '#e6e6e6',
 				'selectors' => array(
-					'{{WRAPPER}} .dh-menu > li > a:hover, {{WRAPPER}} .dh-menu > li > a:focus-visible' => 'color: {{VALUE}};',
+					'{{WRAPPER}} .dh-widget--layout-default .dh-menu > li > a:hover, {{WRAPPER}} .dh-widget--layout-default .dh-menu > li > a:focus-visible' => 'color: {{VALUE}};',
 				),
 			)
 		);
@@ -1130,7 +1509,7 @@ class Dope_Header_Widget extends Widget_Base {
 				'type'      => Controls_Manager::COLOR,
 				'default'   => '#ffffff',
 				'selectors' => array(
-					'{{WRAPPER}} .dh-menu > li.current-menu-item > a::after, {{WRAPPER}} .dh-menu > li.current-menu-ancestor > a::after' => 'background-color: {{VALUE}};',
+					'{{WRAPPER}} .dh-widget--layout-default .dh-menu > li.current-menu-item > a::after, {{WRAPPER}} .dh-widget--layout-default .dh-menu > li.current-menu-ancestor > a::after' => 'background-color: {{VALUE}};',
 				),
 			)
 		);
@@ -1147,8 +1526,11 @@ class Dope_Header_Widget extends Widget_Base {
 		$this->start_controls_section(
 			'section_style_actions',
 			array(
-				'label' => esc_html__( 'Actions and Language', 'dope-header' ),
-				'tab'   => Controls_Manager::TAB_STYLE,
+				'label'     => esc_html__( 'Actions and Language', 'dope-header' ),
+				'tab'       => Controls_Manager::TAB_STYLE,
+				'condition' => array(
+					'header_layout' => 'default',
+				),
 			)
 		);
 
@@ -1339,6 +1721,324 @@ class Dope_Header_Widget extends Widget_Base {
 	}
 
 	/**
+	 * Registers minimal layout style controls.
+	 *
+	 * @return void
+	 */
+	private function register_style_minimal_controls(): void {
+		$this->start_controls_section(
+			'section_style_minimal',
+			array(
+				'label'     => esc_html__( 'Minimal Layout', 'dope-header' ),
+				'tab'       => Controls_Manager::TAB_STYLE,
+				'condition' => array(
+					'header_layout' => 'minimal',
+				),
+			)
+		);
+
+		$this->add_control(
+			'minimal_row_heading',
+			array(
+				'label' => esc_html__( 'Header Row', 'dope-header' ),
+				'type'  => Controls_Manager::HEADING,
+			)
+		);
+
+		$this->add_control(
+			'minimal_row_background',
+			array(
+				'label'     => esc_html__( 'Background Color', 'dope-header' ),
+				'type'      => Controls_Manager::COLOR,
+				'default'   => '#f5f5f5',
+				'selectors' => array(
+					'{{WRAPPER}} .dh-widget--layout-minimal .dh-minimal-main' => 'background-color: {{VALUE}};',
+				),
+			)
+		);
+
+		$this->add_control(
+			'minimal_row_border_color',
+			array(
+				'label'     => esc_html__( 'Bottom Border Color', 'dope-header' ),
+				'type'      => Controls_Manager::COLOR,
+				'default'   => '#d8d8d8',
+				'selectors' => array(
+					'{{WRAPPER}} .dh-widget--layout-minimal .dh-minimal-main__inner' => 'border-bottom-color: {{VALUE}};',
+				),
+			)
+		);
+
+		$this->add_group_control(
+			Group_Control_Box_Shadow::get_type(),
+			array(
+				'name'     => 'minimal_row_shadow',
+				'selector' => '{{WRAPPER}} .dh-widget--layout-minimal .dh-minimal-main',
+			)
+		);
+
+		$this->add_responsive_control(
+			'minimal_row_side_padding',
+			array(
+				'label'      => esc_html__( 'Side Padding', 'dope-header' ),
+				'type'       => Controls_Manager::SLIDER,
+				'size_units' => array( 'px' ),
+				'range'      => array(
+					'px' => array(
+						'min' => 0,
+						'max' => 120,
+					),
+				),
+				'default'    => array(
+					'size' => 22,
+					'unit' => 'px',
+				),
+				'selectors'  => array(
+					'{{WRAPPER}} .dh-widget--layout-minimal .dh-minimal-main__inner' => 'padding-left: {{SIZE}}{{UNIT}}; padding-right: {{SIZE}}{{UNIT}};',
+				),
+			)
+		);
+
+		$this->add_control(
+			'minimal_logo_divider',
+			array(
+				'type' => Controls_Manager::DIVIDER,
+			)
+		);
+
+		$this->add_control(
+			'minimal_logo_heading',
+			array(
+				'label' => esc_html__( 'Logo', 'dope-header' ),
+				'type'  => Controls_Manager::HEADING,
+			)
+		);
+
+		$this->add_responsive_control(
+			'minimal_logo_width',
+			array(
+				'label'      => esc_html__( 'Logo Width', 'dope-header' ),
+				'type'       => Controls_Manager::SLIDER,
+				'size_units' => array( 'px', '%' ),
+				'range'      => array(
+					'px' => array(
+						'min' => 80,
+						'max' => 420,
+					),
+					'%'  => array(
+						'min' => 8,
+						'max' => 40,
+					),
+				),
+				'default'    => array(
+					'size' => 250,
+					'unit' => 'px',
+				),
+				'selectors'  => array(
+					'{{WRAPPER}} .dh-widget--layout-minimal' => '--dh-minimal-logo-width: {{SIZE}}{{UNIT}};',
+					'{{WRAPPER}} .dh-widget--layout-minimal .dh-minimal-brand' => 'width: {{SIZE}}{{UNIT}};',
+				),
+			)
+		);
+
+		$this->add_control(
+			'minimal_menu_divider',
+			array(
+				'type' => Controls_Manager::DIVIDER,
+			)
+		);
+
+		$this->add_control(
+			'minimal_menu_heading',
+			array(
+				'label' => esc_html__( 'Menu', 'dope-header' ),
+				'type'  => Controls_Manager::HEADING,
+			)
+		);
+
+		$this->add_group_control(
+			Group_Control_Typography::get_type(),
+			array(
+				'name'     => 'minimal_menu_typography',
+				'selector' => '{{WRAPPER}} .dh-widget--layout-minimal .dh-minimal-menu > li > a',
+			)
+		);
+
+		$this->add_control(
+			'minimal_menu_color',
+			array(
+				'label'     => esc_html__( 'Text Color', 'dope-header' ),
+				'type'      => Controls_Manager::COLOR,
+				'default'   => '#445065',
+				'selectors' => array(
+					'{{WRAPPER}} .dh-widget--layout-minimal .dh-minimal-menu > li > a' => 'color: {{VALUE}};',
+				),
+			)
+		);
+
+		$this->add_control(
+			'minimal_menu_hover_color',
+			array(
+				'label'     => esc_html__( 'Hover Color', 'dope-header' ),
+				'type'      => Controls_Manager::COLOR,
+				'default'   => '#1f57c3',
+				'selectors' => array(
+					'{{WRAPPER}} .dh-widget--layout-minimal .dh-minimal-menu > li > a:hover, {{WRAPPER}} .dh-widget--layout-minimal .dh-minimal-menu > li > a:focus-visible' => 'color: {{VALUE}};',
+				),
+			)
+		);
+
+		$this->add_control(
+			'minimal_menu_active_color',
+			array(
+				'label'     => esc_html__( 'Active Underline Color', 'dope-header' ),
+				'type'      => Controls_Manager::COLOR,
+				'default'   => '#1f57c3',
+				'selectors' => array(
+					'{{WRAPPER}} .dh-widget--layout-minimal .dh-minimal-menu > li.current-menu-item > a::after, {{WRAPPER}} .dh-widget--layout-minimal .dh-minimal-menu > li.current-menu-ancestor > a::after' => 'background-color: {{VALUE}};',
+				),
+			)
+		);
+
+		$this->add_responsive_control(
+			'minimal_menu_gap',
+			array(
+				'label'      => esc_html__( 'Menu Gap', 'dope-header' ),
+				'type'       => Controls_Manager::SLIDER,
+				'size_units' => array( 'px' ),
+				'range'      => array(
+					'px' => array(
+						'min' => 0,
+						'max' => 64,
+					),
+				),
+				'default'    => array(
+					'size' => 24,
+					'unit' => 'px',
+				),
+				'selectors'  => array(
+					'{{WRAPPER}} .dh-widget--layout-minimal .dh-minimal-menu' => 'gap: 10px {{SIZE}}{{UNIT}};',
+				),
+			)
+		);
+
+		$this->add_control(
+			'minimal_button_divider',
+			array(
+				'type' => Controls_Manager::DIVIDER,
+			)
+		);
+
+		$this->add_control(
+			'minimal_button_heading',
+			array(
+				'label' => esc_html__( 'Button', 'dope-header' ),
+				'type'  => Controls_Manager::HEADING,
+			)
+		);
+
+		$this->add_group_control(
+			Group_Control_Typography::get_type(),
+			array(
+				'name'     => 'minimal_button_typography',
+				'selector' => '{{WRAPPER}} .dh-widget--layout-minimal .dh-minimal-cta',
+			)
+		);
+
+		$this->add_control(
+			'minimal_button_text_color',
+			array(
+				'label'     => esc_html__( 'Text Color', 'dope-header' ),
+				'type'      => Controls_Manager::COLOR,
+				'default'   => '#ffffff',
+				'selectors' => array(
+					'{{WRAPPER}} .dh-widget--layout-minimal .dh-minimal-cta' => 'color: {{VALUE}};',
+				),
+			)
+		);
+
+		$this->add_control(
+			'minimal_button_background',
+			array(
+				'label'     => esc_html__( 'Background Color', 'dope-header' ),
+				'type'      => Controls_Manager::COLOR,
+				'default'   => '#1f57c3',
+				'selectors' => array(
+					'{{WRAPPER}} .dh-widget--layout-minimal .dh-minimal-cta' => 'background-color: {{VALUE}};',
+				),
+			)
+		);
+
+		$this->add_control(
+			'minimal_button_hover_text_color',
+			array(
+				'label'     => esc_html__( 'Hover Text Color', 'dope-header' ),
+				'type'      => Controls_Manager::COLOR,
+				'default'   => '#ffffff',
+				'selectors' => array(
+					'{{WRAPPER}} .dh-widget--layout-minimal .dh-minimal-cta:hover, {{WRAPPER}} .dh-widget--layout-minimal .dh-minimal-cta:focus-visible' => 'color: {{VALUE}};',
+				),
+			)
+		);
+
+		$this->add_control(
+			'minimal_button_hover_background',
+			array(
+				'label'     => esc_html__( 'Hover Background', 'dope-header' ),
+				'type'      => Controls_Manager::COLOR,
+				'default'   => '#1746a2',
+				'selectors' => array(
+					'{{WRAPPER}} .dh-widget--layout-minimal .dh-minimal-cta:hover, {{WRAPPER}} .dh-widget--layout-minimal .dh-minimal-cta:focus-visible' => 'background-color: {{VALUE}};',
+				),
+			)
+		);
+
+		$this->add_group_control(
+			Group_Control_Border::get_type(),
+			array(
+				'name'     => 'minimal_button_border',
+				'selector' => '{{WRAPPER}} .dh-widget--layout-minimal .dh-minimal-cta',
+			)
+		);
+
+		$this->add_responsive_control(
+			'minimal_button_border_radius',
+			array(
+				'label'      => esc_html__( 'Border Radius', 'dope-header' ),
+				'type'       => Controls_Manager::SLIDER,
+				'size_units' => array( 'px' ),
+				'range'      => array(
+					'px' => array(
+						'min' => 0,
+						'max' => 48,
+					),
+				),
+				'default'    => array(
+					'size' => 28,
+					'unit' => 'px',
+				),
+				'selectors'  => array(
+					'{{WRAPPER}} .dh-widget--layout-minimal .dh-minimal-cta' => 'border-radius: {{SIZE}}{{UNIT}};',
+				),
+			)
+		);
+
+		$this->add_responsive_control(
+			'minimal_button_padding',
+			array(
+				'label'      => esc_html__( 'Padding', 'dope-header' ),
+				'type'       => Controls_Manager::DIMENSIONS,
+				'size_units' => array( 'px' ),
+				'selectors'  => array(
+					'{{WRAPPER}} .dh-widget--layout-minimal .dh-minimal-cta' => 'padding: {{TOP}}{{UNIT}} {{RIGHT}}{{UNIT}} {{BOTTOM}}{{UNIT}} {{LEFT}}{{UNIT}};',
+				),
+			)
+		);
+
+		$this->end_controls_section();
+	}
+
+	/**
 	 * Registers mobile drawer style controls.
 	 *
 	 * @return void
@@ -1373,6 +2073,29 @@ class Dope_Header_Widget extends Widget_Base {
 		);
 
 		$this->add_control(
+			'mobile_toggle_background_color',
+			array(
+				'label'     => esc_html__( 'Hamburger Background', 'dope-header' ),
+				'type'      => Controls_Manager::COLOR,
+				'selectors' => array(
+					'{{WRAPPER}} .dh-mobile-toggle' => 'background-color: {{VALUE}};',
+				),
+			)
+		);
+
+		$this->add_control(
+			'mobile_toggle_hover_color',
+			array(
+				'label'     => esc_html__( 'Hamburger Hover Color', 'dope-header' ),
+				'type'      => Controls_Manager::COLOR,
+				'default'   => '#d9d9d9',
+				'selectors' => array(
+					'{{WRAPPER}} .dh-mobile-toggle:hover, {{WRAPPER}} .dh-mobile-toggle:focus-visible' => 'color: {{VALUE}};',
+				),
+			)
+		);
+
+		$this->add_control(
 			'mobile_drawer_divider',
 			array(
 				'type' => Controls_Manager::DIVIDER,
@@ -1382,8 +2105,20 @@ class Dope_Header_Widget extends Widget_Base {
 		$this->add_control(
 			'mobile_drawer_heading',
 			array(
-				'label' => esc_html__( 'Drawer Panel', 'dope-header' ),
+				'label' => esc_html__( 'Panels and Overlay', 'dope-header' ),
 				'type'  => Controls_Manager::HEADING,
+			)
+		);
+
+		$this->add_control(
+			'mobile_overlay_color',
+			array(
+				'label'     => esc_html__( 'Overlay Color', 'dope-header' ),
+				'type'      => Controls_Manager::COLOR,
+				'default'   => 'rgba(0, 0, 0, 0.55)',
+				'selectors' => array(
+					'{{WRAPPER}} .dh-mobile-drawer__overlay' => 'background-color: {{VALUE}};',
+				),
 			)
 		);
 
@@ -1394,7 +2129,7 @@ class Dope_Header_Widget extends Widget_Base {
 				'type'      => Controls_Manager::COLOR,
 				'default'   => '#0d0d0d',
 				'selectors' => array(
-					'{{WRAPPER}} .dh-mobile-drawer__panel' => 'background-color: {{VALUE}};',
+					'{{WRAPPER}} .dh-mobile-drawer--drawer .dh-mobile-drawer__panel' => 'background-color: {{VALUE}};',
 				),
 			)
 		);
@@ -1406,7 +2141,46 @@ class Dope_Header_Widget extends Widget_Base {
 				'type'      => Controls_Manager::COLOR,
 				'default'   => '#ffffff',
 				'selectors' => array(
-					'{{WRAPPER}} .dh-menu--mobile a, {{WRAPPER}} .dh-mobile-drawer__close' => 'color: {{VALUE}};',
+					'{{WRAPPER}} .dh-mobile-drawer--drawer .dh-menu--mobile a, {{WRAPPER}} .dh-mobile-drawer--drawer .dh-mobile-drawer__close, {{WRAPPER}} .dh-mobile-drawer--drawer .dh-mobile-submenu-toggle' => 'color: {{VALUE}};',
+				),
+			)
+		);
+
+		$this->add_control(
+			'mobile_dropdown_divider',
+			array(
+				'type' => Controls_Manager::DIVIDER,
+			)
+		);
+
+		$this->add_control(
+			'mobile_dropdown_heading',
+			array(
+				'label' => esc_html__( 'Dropdown Panel', 'dope-header' ),
+				'type'  => Controls_Manager::HEADING,
+			)
+		);
+
+		$this->add_control(
+			'mobile_dropdown_background',
+			array(
+				'label'     => esc_html__( 'Dropdown Background', 'dope-header' ),
+				'type'      => Controls_Manager::COLOR,
+				'default'   => '#ffffff',
+				'selectors' => array(
+					'{{WRAPPER}} .dh-mobile-drawer--dropdown .dh-mobile-drawer__panel' => 'background-color: {{VALUE}};',
+				),
+			)
+		);
+
+		$this->add_control(
+			'mobile_dropdown_text_color',
+			array(
+				'label'     => esc_html__( 'Dropdown Text Color', 'dope-header' ),
+				'type'      => Controls_Manager::COLOR,
+				'default'   => '#233754',
+				'selectors' => array(
+					'{{WRAPPER}} .dh-mobile-drawer--dropdown .dh-menu--mobile a, {{WRAPPER}} .dh-mobile-drawer--dropdown .dh-mobile-submenu-toggle' => 'color: {{VALUE}};',
 				),
 			)
 		);
@@ -1421,81 +2195,115 @@ class Dope_Header_Widget extends Widget_Base {
 	 */
 	protected function render(): void {
 		$settings = $this->get_settings_for_display();
+		$layout              = $this->get_header_layout( $settings );
+		$mobile_enabled      = $this->is_enabled( $settings, 'enable_mobile_drawer', true );
+		$mobile_breakpoint   = $this->sanitize_int( $settings['mobile_breakpoint'] ?? 1024, 1024, 640 );
+		$mobile_close_on_nav = $this->is_enabled( $settings, 'mobile_close_on_link_click', true );
+		$mobile_submenus     = $this->is_enabled( $settings, 'enable_mobile_submenus', true );
+		$mobile_menu_mode    = $this->get_mobile_menu_mode( $settings, $layout );
+		$menu_id             = isset( $settings['menu_id'] ) ? absint( $settings['menu_id'] ) : 0;
+		$desktop_menu_class  = 'minimal' === $layout ? 'dh-minimal-menu' : 'dh-menu dh-menu--desktop';
+		$mobile_config = array(
+			'enabled'          => $mobile_enabled,
+			'breakpoint'       => $mobile_breakpoint,
+			'closeOnLinkClick' => $mobile_close_on_nav,
+			'submenusEnabled'  => $mobile_submenus,
+			'mode'             => $mobile_menu_mode,
+		);
+
+		$render_data = array(
+			'mobile_enabled'      => $mobile_enabled,
+			'mobile_breakpoint'   => $mobile_breakpoint,
+			'mobile_menu_mode'    => $mobile_menu_mode,
+			'desktop_menu'        => $this->get_menu_markup( $menu_id, $desktop_menu_class ),
+			'mobile_menu'         => $this->get_menu_markup( $menu_id, 'dh-menu dh-menu--mobile' ),
+			'is_editor'           => $this->is_editor_mode(),
+			'fallback_text'       => isset( $settings['menu_fallback_label'] ) ? sanitize_text_field( $settings['menu_fallback_label'] ) : '',
+			'logo_src'            => $this->get_logo_src( $settings ),
+			'logo_alt'            => $this->get_logo_alt( $settings ),
+			'logo_url'            => $this->get_url_value( $settings['logo_link'] ?? array(), home_url( '/' ) ),
+			'logo_attributes'     => $this->get_link_attributes( $settings['logo_link'] ?? array() ),
+			'uid'                 => wp_unique_id( 'dh-widget-' ),
+		);
+
+		$render_data['drawer_id'] = $render_data['uid'] . '-drawer';
+		$render_data['mobile_menu'] = $this->get_mobile_menu_markup( $menu_id, 'dh-menu dh-menu--mobile', $mobile_submenus, $render_data['uid'] );
+		$render_data['mobile_config_json'] = wp_json_encode( $mobile_config );
+
+		if ( 'minimal' === $layout ) {
+			$render_data['sticky_enabled']               = $this->is_enabled( $settings, 'enable_sticky_header', true );
+			$render_data['shrink_enabled']               = $this->is_enabled( $settings, 'enable_header_shrink', true );
+			$render_data['sticky_scroll_threshold']      = $this->sanitize_int( $settings['sticky_scroll_threshold'] ?? 24, 24, 0 );
+			$render_data['minimal_header_height']        = $this->sanitize_int( $settings['minimal_header_height'] ?? 92, 92, 48 );
+			$render_data['minimal_header_height_scrolled'] = $this->sanitize_int( $settings['minimal_header_height_scrolled'] ?? 72, 72, 40 );
+
+			if ( $render_data['minimal_header_height_scrolled'] > $render_data['minimal_header_height'] ) {
+				$render_data['minimal_header_height_scrolled'] = $render_data['minimal_header_height'];
+			}
+
+			$this->render_minimal_layout( $settings, $render_data );
+			return;
+		}
 
 		$topbar_items        = $this->get_topbar_items( $settings );
 		$topbar_social_items = $this->get_topbar_social_items( $settings );
 		$show_topbar         = $this->is_enabled( $settings, 'enable_topbar', true ) && ! empty( $topbar_items );
 		$show_topbar_arrows  = $this->is_enabled( $settings, 'topbar_show_arrows', true ) && count( $topbar_items ) > 1;
 		$topbar_autoplay     = $this->is_enabled( $settings, 'topbar_autoplay', true ) && count( $topbar_items ) > 1;
-		$show_topbar_socials = $this->is_enabled( $settings, 'show_topbar_socials', true ) && ! empty( $topbar_social_items );
 
-		$mobile_enabled      = $this->is_enabled( $settings, 'enable_mobile_drawer', true );
-		$mobile_breakpoint   = $this->sanitize_int( $settings['mobile_breakpoint'] ?? 1024, 1024, 640 );
-		$mobile_close_on_nav = $this->is_enabled( $settings, 'mobile_close_on_link_click', true );
-
-		$menu_id       = isset( $settings['menu_id'] ) ? absint( $settings['menu_id'] ) : 0;
-		$desktop_menu  = $this->get_menu_markup( $menu_id, 'dh-menu dh-menu--desktop' );
-		$mobile_menu   = $this->get_menu_markup( $menu_id, 'dh-menu dh-menu--mobile' );
-		$is_editor     = $this->is_editor_mode();
-		$fallback_text = isset( $settings['menu_fallback_label'] ) ? sanitize_text_field( $settings['menu_fallback_label'] ) : '';
-
-		$logo_src = Utils::get_placeholder_image_src();
-		if ( isset( $settings['logo_image']['url'] ) && '' !== $settings['logo_image']['url'] ) {
-			$logo_src = esc_url( $settings['logo_image']['url'] );
-		}
-
-		$logo_alt = isset( $settings['logo_alt'] ) ? sanitize_text_field( $settings['logo_alt'] ) : '';
-		if ( '' === $logo_alt ) {
-			$logo_alt = get_bloginfo( 'name' );
-		}
-
-		$logo_url        = $this->get_url_value( $settings['logo_link'] ?? array(), home_url( '/' ) );
-		$logo_attributes = $this->get_link_attributes( $settings['logo_link'] ?? array() );
-
-		$uid       = wp_unique_id( 'dh-widget-' );
-		$drawer_id = $uid . '-drawer';
-
-		$topbar_config = array(
-			'items'        => $topbar_items,
-			'autoplay'     => $topbar_autoplay,
-			'delay'        => $this->sanitize_int( $settings['topbar_autoplay_delay'] ?? 3500, 3500, 1000 ),
-			'pauseOnHover' => $this->is_enabled( $settings, 'topbar_pause_on_hover', true ),
-			'arrows'       => $show_topbar_arrows,
+		$render_data['topbar_items']         = $topbar_items;
+		$render_data['topbar_social_items']  = $topbar_social_items;
+		$render_data['show_topbar']          = $show_topbar;
+		$render_data['show_topbar_arrows']   = $show_topbar_arrows;
+		$render_data['show_topbar_socials']  = $this->is_enabled( $settings, 'show_topbar_socials', true ) && ! empty( $topbar_social_items );
+		$render_data['topbar_config_json']   = wp_json_encode(
+			array(
+				'items'        => $topbar_items,
+				'autoplay'     => $topbar_autoplay,
+				'delay'        => $this->sanitize_int( $settings['topbar_autoplay_delay'] ?? 3500, 3500, 1000 ),
+				'pauseOnHover' => $this->is_enabled( $settings, 'topbar_pause_on_hover', true ),
+				'arrows'       => $show_topbar_arrows,
+			)
 		);
 
-		$mobile_config = array(
-			'enabled'          => $mobile_enabled,
-			'breakpoint'       => $mobile_breakpoint,
-			'closeOnLinkClick' => $mobile_close_on_nav,
-		);
+		$this->render_default_layout( $settings, $render_data );
+	}
 
-		$widget_classes = 'dh-widget' . ( $show_topbar ? '' : ' dh-widget--no-topbar' );
+	/**
+	 * Renders the default widget layout.
+	 *
+	 * @param array $settings    Widget settings.
+	 * @param array $render_data Prepared render data.
+	 * @return void
+	 */
+	private function render_default_layout( array $settings, array $render_data ): void {
+		$widget_classes = 'dh-widget dh-widget--layout-default dh-widget--mobile-menu-' . sanitize_html_class( $render_data['mobile_menu_mode'] ) . ( $render_data['show_topbar'] ? '' : ' dh-widget--no-topbar' );
 
 		if ( $this->is_enabled( $settings, 'header_absolute_position', false ) ) {
 			$widget_classes .= ' dh-widget--absolute';
 		}
 
-		echo '<header class="' . esc_attr( $widget_classes ) . '" id="' . esc_attr( $uid ) . '" style="--dh-mobile-breakpoint:' . esc_attr( (string) $mobile_breakpoint ) . 'px;" data-dh-mobile-config="' . esc_attr( wp_json_encode( $mobile_config ) ) . '">';
+		echo '<header class="' . esc_attr( $widget_classes ) . '" id="' . esc_attr( $render_data['uid'] ) . '" style="--dh-mobile-breakpoint:' . esc_attr( (string) $render_data['mobile_breakpoint'] ) . 'px;" data-dh-mobile-config="' . esc_attr( $render_data['mobile_config_json'] ) . '">';
 
-		if ( $show_topbar ) {
-			echo '<div class="dh-topbar" data-dh-config="' . esc_attr( wp_json_encode( $topbar_config ) ) . '">';
+		if ( $render_data['show_topbar'] ) {
+			echo '<div class="dh-topbar" data-dh-config="' . esc_attr( $render_data['topbar_config_json'] ) . '">';
 			echo '<div class="dh-shell dh-topbar__inner">';
 			echo '<div class="dh-topbar__center">';
 
-			if ( $show_topbar_arrows ) {
+			if ( $render_data['show_topbar_arrows'] ) {
 				echo '<button type="button" class="dh-topbar__arrow dh-topbar__arrow--prev" data-dh-prev aria-label="' . esc_attr__( 'Previous announcement', 'dope-header' ) . '">';
 				echo wp_kses( $this->render_inline_chevron( true ), $this->get_allowed_svg_html() );
 				echo '</button>';
 			}
 
 			echo '<div class="dh-topbar__viewport" aria-live="polite"><div class="dh-topbar__track">';
-			foreach ( $topbar_items as $index => $item ) {
+			foreach ( $render_data['topbar_items'] as $index => $item ) {
 				$is_active = 0 === $index;
 				echo '<span class="dh-topbar__item' . ( $is_active ? ' is-active' : '' ) . '" data-dh-index="' . esc_attr( (string) $index ) . '"' . ( $is_active ? '' : ' hidden' ) . '>' . esc_html( $item ) . '</span>';
 			}
 			echo '</div></div>';
 
-			if ( $show_topbar_arrows ) {
+			if ( $render_data['show_topbar_arrows'] ) {
 				echo '<button type="button" class="dh-topbar__arrow dh-topbar__arrow--next" data-dh-next aria-label="' . esc_attr__( 'Next announcement', 'dope-header' ) . '">';
 				echo wp_kses( $this->render_inline_chevron( false ), $this->get_allowed_svg_html() );
 				echo '</button>';
@@ -1503,9 +2311,9 @@ class Dope_Header_Widget extends Widget_Base {
 
 			echo '</div>';
 
-			if ( $show_topbar_socials ) {
+			if ( $render_data['show_topbar_socials'] ) {
 				echo '<div class="dh-topbar__socials">';
-				foreach ( $topbar_social_items as $social_item ) {
+				foreach ( $render_data['topbar_social_items'] as $social_item ) {
 					$this->render_topbar_social_icon( $social_item );
 				}
 				echo '</div>';
@@ -1517,10 +2325,10 @@ class Dope_Header_Widget extends Widget_Base {
 		echo '<div class="dh-main"><div class="dh-shell dh-main__inner">';
 
 		echo '<nav class="dh-nav" aria-label="' . esc_attr__( 'Primary navigation', 'dope-header' ) . '">';
-		if ( '' !== trim( $desktop_menu ) ) {
-			echo $desktop_menu; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
-		} elseif ( $is_editor ) {
-			echo '<div class="dh-menu-fallback">' . esc_html( $fallback_text ) . '</div>';
+		if ( '' !== trim( $render_data['desktop_menu'] ) ) {
+			echo $render_data['desktop_menu']; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
+		} elseif ( $render_data['is_editor'] ) {
+			echo '<div class="dh-menu-fallback">' . esc_html( $render_data['fallback_text'] ) . '</div>';
 		}
 		echo '</nav>';
 
@@ -1528,8 +2336,8 @@ class Dope_Header_Widget extends Widget_Base {
 		$this->render_actions( $settings );
 		echo '</div>';
 
-		if ( $mobile_enabled ) {
-			echo '<button type="button" class="dh-mobile-toggle" aria-expanded="false" aria-controls="' . esc_attr( $drawer_id ) . '" aria-label="' . esc_attr__( 'Open menu', 'dope-header' ) . '"><span class="dh-mobile-toggle__line"></span><span class="dh-mobile-toggle__line"></span><span class="dh-mobile-toggle__line"></span></button>';
+		if ( $render_data['mobile_enabled'] ) {
+			echo '<button type="button" class="dh-mobile-toggle" aria-expanded="false" aria-controls="' . esc_attr( $render_data['drawer_id'] ) . '" aria-label="' . esc_attr__( 'Open menu', 'dope-header' ) . '"><span class="dh-mobile-toggle__line"></span><span class="dh-mobile-toggle__line"></span><span class="dh-mobile-toggle__line"></span></button>';
 		}
 
 		echo '</div></div></div>';
@@ -1537,32 +2345,146 @@ class Dope_Header_Widget extends Widget_Base {
 		echo '<div class="dh-brand-layer"><div class="dh-shell">';
 		printf(
 			'<div class="dh-brand-float"><a class="dh-brand-float__link" href="%1$s"%2$s%3$s><img class="dh-brand-float__logo" src="%4$s" alt="%5$s" loading="lazy" /></a></div>',
-			esc_url( $logo_url ),
-			isset( $logo_attributes['target'] ) ? ' target="' . esc_attr( $logo_attributes['target'] ) . '"' : '',
-			isset( $logo_attributes['rel'] ) ? ' rel="' . esc_attr( $logo_attributes['rel'] ) . '"' : '',
-			esc_url( $logo_src ),
-			esc_attr( $logo_alt )
+			esc_url( $render_data['logo_url'] ),
+			isset( $render_data['logo_attributes']['target'] ) ? ' target="' . esc_attr( $render_data['logo_attributes']['target'] ) . '"' : '',
+			isset( $render_data['logo_attributes']['rel'] ) ? ' rel="' . esc_attr( $render_data['logo_attributes']['rel'] ) . '"' : '',
+			esc_url( $render_data['logo_src'] ),
+			esc_attr( $render_data['logo_alt'] )
 		);
 		echo '</div></div>';
 
-		if ( $mobile_enabled ) {
-			echo '<div class="dh-mobile-drawer" id="' . esc_attr( $drawer_id ) . '" hidden>';
-			echo '<button type="button" class="dh-mobile-drawer__overlay" data-dh-drawer-close aria-label="' . esc_attr__( 'Close menu', 'dope-header' ) . '"></button>';
-			echo '<div class="dh-mobile-drawer__panel" role="dialog" aria-modal="true" aria-label="' . esc_attr__( 'Mobile menu', 'dope-header' ) . '">';
-			echo '<div class="dh-mobile-drawer__header"><span class="dh-mobile-drawer__title">' . esc_html__( 'Menu', 'dope-header' ) . '</span><button type="button" class="dh-mobile-drawer__close" data-dh-drawer-close aria-label="' . esc_attr__( 'Close menu', 'dope-header' ) . '">&times;</button></div>';
-			echo '<nav class="dh-mobile-drawer__nav" aria-label="' . esc_attr__( 'Mobile navigation', 'dope-header' ) . '">';
-			if ( '' !== trim( $mobile_menu ) ) {
-				echo $mobile_menu; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
-			} elseif ( $is_editor ) {
-				echo '<div class="dh-menu-fallback">' . esc_html( $fallback_text ) . '</div>';
-			}
-			echo '</nav>';
-			echo '<div class="dh-actions dh-actions--mobile">';
-			$this->render_actions( $settings );
-			echo '</div></div></div>';
-		}
+		$this->render_mobile_menu_container( $settings, $render_data, false );
 
 		echo '</header>';
+	}
+
+	/**
+	 * Renders the minimal widget layout.
+	 *
+	 * @param array $settings    Widget settings.
+	 * @param array $render_data Prepared render data.
+	 * @return void
+	 */
+	private function render_minimal_layout( array $settings, array $render_data ): void {
+		$widget_classes = 'dh-widget dh-widget--layout-minimal dh-widget--mobile-menu-' . sanitize_html_class( $render_data['mobile_menu_mode'] );
+		if ( $render_data['sticky_enabled'] ) {
+			$widget_classes .= ' dh-widget--sticky';
+		}
+
+		$style_parts = array(
+			'--dh-mobile-breakpoint:' . $render_data['mobile_breakpoint'] . 'px',
+			'--dh-minimal-height:' . $render_data['minimal_header_height'] . 'px',
+			'--dh-minimal-height-scrolled:' . $render_data['minimal_header_height_scrolled'] . 'px',
+		);
+
+		$sticky_config = array(
+			'enabled'   => $render_data['sticky_enabled'],
+			'shrink'    => $render_data['shrink_enabled'],
+			'threshold' => $render_data['sticky_scroll_threshold'],
+		);
+
+		echo '<header class="' . esc_attr( $widget_classes ) . '" id="' . esc_attr( $render_data['uid'] ) . '" style="' . esc_attr( implode( ';', $style_parts ) ) . '" data-dh-mobile-config="' . esc_attr( $render_data['mobile_config_json'] ) . '" data-dh-sticky-config="' . esc_attr( wp_json_encode( $sticky_config ) ) . '">';
+		echo '<div class="dh-minimal-main"><div class="dh-shell dh-minimal-main__inner">';
+
+		printf(
+			'<div class="dh-minimal-brand"><a class="dh-minimal-brand__link" href="%1$s"%2$s%3$s><img class="dh-minimal-brand__logo" src="%4$s" alt="%5$s" loading="lazy" /></a></div>',
+			esc_url( $render_data['logo_url'] ),
+			isset( $render_data['logo_attributes']['target'] ) ? ' target="' . esc_attr( $render_data['logo_attributes']['target'] ) . '"' : '',
+			isset( $render_data['logo_attributes']['rel'] ) ? ' rel="' . esc_attr( $render_data['logo_attributes']['rel'] ) . '"' : '',
+			esc_url( $render_data['logo_src'] ),
+			esc_attr( $render_data['logo_alt'] )
+		);
+
+		echo '<nav class="dh-minimal-nav" aria-label="' . esc_attr__( 'Primary navigation', 'dope-header' ) . '">';
+		if ( '' !== trim( $render_data['desktop_menu'] ) ) {
+			echo $render_data['desktop_menu']; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
+		} elseif ( $render_data['is_editor'] ) {
+			echo '<div class="dh-menu-fallback">' . esc_html( $render_data['fallback_text'] ) . '</div>';
+		}
+		echo '</nav>';
+
+		echo '<div class="dh-minimal-actions">';
+		$this->render_minimal_cta( $settings, 'dh-minimal-cta' );
+
+		if ( $render_data['mobile_enabled'] ) {
+			echo '<button type="button" class="dh-mobile-toggle" aria-expanded="false" aria-controls="' . esc_attr( $render_data['drawer_id'] ) . '" aria-label="' . esc_attr__( 'Open menu', 'dope-header' ) . '"><span class="dh-mobile-toggle__line"></span><span class="dh-mobile-toggle__line"></span><span class="dh-mobile-toggle__line"></span></button>';
+		}
+
+		echo '</div></div></div>';
+
+		$this->render_mobile_menu_container( $settings, $render_data, true );
+
+		echo '</header>';
+	}
+
+	/**
+	 * Renders the mobile menu container for the selected presentation mode.
+	 *
+	 * @param array $settings        Widget settings.
+	 * @param array $render_data     Prepared render data.
+	 * @param bool  $include_minimal Whether to render the minimal CTA in mobile.
+	 * @return void
+	 */
+	private function render_mobile_menu_container( array $settings, array $render_data, bool $include_minimal ): void {
+		if ( ! $render_data['mobile_enabled'] ) {
+			return;
+		}
+
+		$mode = $render_data['mobile_menu_mode'];
+
+		echo '<div class="dh-mobile-drawer dh-mobile-drawer--' . esc_attr( $mode ) . '" id="' . esc_attr( $render_data['drawer_id'] ) . '" hidden>';
+		echo '<button type="button" class="dh-mobile-drawer__overlay" data-dh-drawer-close aria-label="' . esc_attr__( 'Close menu', 'dope-header' ) . '"></button>';
+		echo '<div class="dh-mobile-drawer__panel" role="dialog" aria-modal="true" aria-label="' . esc_attr__( 'Mobile menu', 'dope-header' ) . '">';
+
+		if ( 'drawer' === $mode ) {
+			echo '<div class="dh-mobile-drawer__header"><span class="dh-mobile-drawer__title">' . esc_html__( 'Menu', 'dope-header' ) . '</span><button type="button" class="dh-mobile-drawer__close" data-dh-drawer-close aria-label="' . esc_attr__( 'Close menu', 'dope-header' ) . '">&times;</button></div>';
+		}
+
+		echo '<nav class="dh-mobile-drawer__nav" aria-label="' . esc_attr__( 'Mobile navigation', 'dope-header' ) . '">';
+		if ( '' !== trim( $render_data['mobile_menu'] ) ) {
+			echo $render_data['mobile_menu']; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
+		} elseif ( $render_data['is_editor'] ) {
+			echo '<div class="dh-menu-fallback">' . esc_html( $render_data['fallback_text'] ) . '</div>';
+		}
+		echo '</nav>';
+
+		if ( $include_minimal ) {
+			echo '<div class="dh-minimal-drawer-cta">';
+			$this->render_minimal_cta( $settings, 'dh-minimal-cta dh-minimal-cta--mobile' );
+			echo '</div>';
+		} elseif ( 'drawer' === $mode ) {
+			echo '<div class="dh-actions dh-actions--mobile">';
+			$this->render_actions( $settings );
+			echo '</div>';
+		}
+
+		echo '</div></div>';
+	}
+
+	/**
+	 * Renders the minimal layout CTA button.
+	 *
+	 * @param array  $settings   Widget settings.
+	 * @param string $class_name CSS class list.
+	 * @return void
+	 */
+	private function render_minimal_cta( array $settings, string $class_name ): void {
+		$label           = isset( $settings['cta_button_text'] ) ? sanitize_text_field( $settings['cta_button_text'] ) : '';
+		$label           = '' !== $label ? $label : esc_html__( 'Contact', 'dope-header' );
+		$cta_link        = $settings['cta_button_link'] ?? array();
+		$url             = $this->get_url_value( $cta_link, '#' );
+		$link_attributes = $this->get_link_attributes( $cta_link );
+		$aria_label      = '' !== $label ? $label : esc_html__( 'Call to action', 'dope-header' );
+
+		printf(
+			'<a class="%1$s" href="%2$s"%3$s%4$s aria-label="%5$s"><span class="dh-minimal-cta__label">%6$s</span></a>',
+			esc_attr( $class_name ),
+			esc_url( $url ),
+			isset( $link_attributes['target'] ) ? ' target="' . esc_attr( $link_attributes['target'] ) . '"' : '',
+			isset( $link_attributes['rel'] ) ? ' rel="' . esc_attr( $link_attributes['rel'] ) . '"' : '',
+			esc_attr( $aria_label ),
+			esc_html( $label )
+		);
 	}
 
 	/**
@@ -1809,6 +2731,35 @@ class Dope_Header_Widget extends Widget_Base {
 	}
 
 	/**
+	 * Gets rendered mobile menu markup with optional submenu toggles.
+	 *
+	 * @param int    $menu_id          WordPress menu term ID.
+	 * @param string $class_name       Menu class attribute.
+	 * @param bool   $enable_submenus  Whether submenu toggles should be rendered.
+	 * @param string $instance_prefix  Unique widget instance prefix.
+	 * @return string
+	 */
+	private function get_mobile_menu_markup( int $menu_id, string $class_name, bool $enable_submenus, string $instance_prefix ): string {
+		if ( ! $enable_submenus || ! class_exists( 'Dope_Header_Mobile_Menu_Walker' ) ) {
+			return $this->get_menu_markup( $menu_id, $class_name );
+		}
+
+		$menu_markup = wp_nav_menu(
+			array(
+				'menu'        => $menu_id,
+				'container'   => false,
+				'menu_class'  => $class_name,
+				'fallback_cb' => '__return_empty_string',
+				'echo'        => false,
+				'depth'       => 2,
+				'walker'      => new Dope_Header_Mobile_Menu_Walker( $instance_prefix ),
+			)
+		);
+
+		return is_string( $menu_markup ) ? $menu_markup : '';
+	}
+
+	/**
 	 * Gets the first top-level item from a selected language menu.
 	 *
 	 * @param int $menu_id WordPress menu term ID.
@@ -1859,6 +2810,61 @@ class Dope_Header_Widget extends Widget_Base {
 		}
 
 		return $options;
+	}
+
+	/**
+	 * Gets the selected widget layout.
+	 *
+	 * @param array $settings Widget settings.
+	 * @return string
+	 */
+	private function get_header_layout( array $settings ): string {
+		$layout = isset( $settings['header_layout'] ) ? sanitize_key( $settings['header_layout'] ) : 'default';
+
+		return in_array( $layout, array( 'default', 'minimal' ), true ) ? $layout : 'default';
+	}
+
+	/**
+	 * Gets the selected mobile menu presentation mode.
+	 *
+	 * @param array  $settings Widget settings.
+	 * @param string $layout   Resolved header layout.
+	 * @return string
+	 */
+	private function get_mobile_menu_mode( array $settings, string $layout ): string {
+		$mode = isset( $settings['mobile_menu_mode'] ) ? sanitize_key( $settings['mobile_menu_mode'] ) : '';
+
+		if ( in_array( $mode, array( 'drawer', 'dropdown' ), true ) ) {
+			return $mode;
+		}
+
+		return 'minimal' === $layout ? 'dropdown' : 'drawer';
+	}
+
+	/**
+	 * Gets the configured logo source URL.
+	 *
+	 * @param array $settings Widget settings.
+	 * @return string
+	 */
+	private function get_logo_src( array $settings ): string {
+		if ( isset( $settings['logo_image']['url'] ) && '' !== $settings['logo_image']['url'] ) {
+			return esc_url( $settings['logo_image']['url'] );
+		}
+
+		return Utils::get_placeholder_image_src();
+	}
+
+	/**
+	 * Gets the configured logo alt text.
+	 *
+	 * @param array $settings Widget settings.
+	 * @return string
+	 */
+	private function get_logo_alt( array $settings ): string {
+		$logo_alt = isset( $settings['logo_alt'] ) ? sanitize_text_field( $settings['logo_alt'] ) : '';
+
+		return '' !== $logo_alt ? $logo_alt : get_bloginfo( 'name' );
 	}
 
 	/**
