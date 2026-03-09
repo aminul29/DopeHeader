@@ -561,11 +561,40 @@ class Dope_Header_Widget extends Widget_Base {
 		);
 
 		$this->add_control(
+			'logo_type',
+			array(
+				'label'   => esc_html__( 'Logo Type', 'dope-header' ),
+				'type'    => Controls_Manager::SELECT,
+				'default' => 'image',
+				'options' => array(
+					'image' => esc_html__( 'Image', 'dope-header' ),
+					'text'  => esc_html__( 'Text', 'dope-header' ),
+				),
+			)
+		);
+
+		$this->add_control(
 			'logo_image',
 			array(
 				'label'   => esc_html__( 'Logo Image', 'dope-header' ),
 				'type'    => Controls_Manager::MEDIA,
 				'default' => array( 'url' => Utils::get_placeholder_image_src() ),
+				'condition' => array(
+					'logo_type' => 'image',
+				),
+			)
+		);
+
+		$this->add_control(
+			'logo_text',
+			array(
+				'label'       => esc_html__( 'Logo Text', 'dope-header' ),
+				'type'        => Controls_Manager::TEXT,
+				'label_block' => true,
+				'default'     => get_bloginfo( 'name' ),
+				'condition'   => array(
+					'logo_type' => 'text',
+				),
 			)
 		);
 
@@ -576,6 +605,9 @@ class Dope_Header_Widget extends Widget_Base {
 				'type'        => Controls_Manager::TEXT,
 				'label_block' => true,
 				'default'     => get_bloginfo( 'name' ),
+				'condition'   => array(
+					'logo_type' => 'image',
+				),
 			)
 		);
 
@@ -1427,6 +1459,53 @@ class Dope_Header_Widget extends Widget_Base {
 			)
 		);
 
+		$this->add_control(
+			'logo_text_style_divider',
+			array(
+				'type' => Controls_Manager::DIVIDER,
+			)
+		);
+
+		$this->add_control(
+			'logo_text_style_heading',
+			array(
+				'label' => esc_html__( 'Text Logo', 'dope-header' ),
+				'type'  => Controls_Manager::HEADING,
+			)
+		);
+
+		$this->add_group_control(
+			Group_Control_Typography::get_type(),
+			array(
+				'name'     => 'logo_text_typography',
+				'selector' => '{{WRAPPER}} .dh-widget--layout-default .dh-brand-float__text, {{WRAPPER}} .dh-widget--layout-default .dh-default-mobile-brand__text',
+			)
+		);
+
+		$this->add_control(
+			'logo_text_color',
+			array(
+				'label'     => esc_html__( 'Text Color', 'dope-header' ),
+				'type'      => Controls_Manager::COLOR,
+				'default'   => '#ffffff',
+				'selectors' => array(
+					'{{WRAPPER}} .dh-widget--layout-default .dh-brand-float__text, {{WRAPPER}} .dh-widget--layout-default .dh-default-mobile-brand__text' => 'color: {{VALUE}};',
+				),
+			)
+		);
+
+		$this->add_control(
+			'logo_text_hover_color',
+			array(
+				'label'     => esc_html__( 'Hover Color', 'dope-header' ),
+				'type'      => Controls_Manager::COLOR,
+				'default'   => '#ffffff',
+				'selectors' => array(
+					'{{WRAPPER}} .dh-widget--layout-default .dh-brand-float__link:hover .dh-brand-float__text, {{WRAPPER}} .dh-widget--layout-default .dh-brand-float__link:focus-visible .dh-brand-float__text, {{WRAPPER}} .dh-widget--layout-default .dh-default-mobile-brand__link:hover .dh-default-mobile-brand__text, {{WRAPPER}} .dh-widget--layout-default .dh-default-mobile-brand__link:focus-visible .dh-default-mobile-brand__text' => 'color: {{VALUE}};',
+				),
+			)
+		);
+
 		$this->end_controls_section();
 	}
 
@@ -1841,6 +1920,38 @@ class Dope_Header_Widget extends Widget_Base {
 			)
 		);
 
+		$this->add_group_control(
+			Group_Control_Typography::get_type(),
+			array(
+				'name'     => 'minimal_logo_text_typography',
+				'selector' => '{{WRAPPER}} .dh-widget--layout-minimal .dh-minimal-brand__text',
+			)
+		);
+
+		$this->add_control(
+			'minimal_logo_text_color',
+			array(
+				'label'     => esc_html__( 'Text Color', 'dope-header' ),
+				'type'      => Controls_Manager::COLOR,
+				'default'   => '#1c3d72',
+				'selectors' => array(
+					'{{WRAPPER}} .dh-widget--layout-minimal .dh-minimal-brand__text' => 'color: {{VALUE}};',
+				),
+			)
+		);
+
+		$this->add_control(
+			'minimal_logo_text_hover_color',
+			array(
+				'label'     => esc_html__( 'Hover Color', 'dope-header' ),
+				'type'      => Controls_Manager::COLOR,
+				'default'   => '#1746a2',
+				'selectors' => array(
+					'{{WRAPPER}} .dh-widget--layout-minimal .dh-minimal-brand__link:hover .dh-minimal-brand__text, {{WRAPPER}} .dh-widget--layout-minimal .dh-minimal-brand__link:focus-visible .dh-minimal-brand__text' => 'color: {{VALUE}};',
+				),
+			)
+		);
+
 		$this->add_control(
 			'minimal_menu_divider',
 			array(
@@ -2219,6 +2330,8 @@ class Dope_Header_Widget extends Widget_Base {
 			'mobile_menu'         => $this->get_menu_markup( $menu_id, 'dh-menu dh-menu--mobile' ),
 			'is_editor'           => $this->is_editor_mode(),
 			'fallback_text'       => isset( $settings['menu_fallback_label'] ) ? sanitize_text_field( $settings['menu_fallback_label'] ) : '',
+			'logo_type'           => $this->get_logo_type( $settings ),
+			'logo_text'           => $this->get_logo_text( $settings ),
 			'logo_src'            => $this->get_logo_src( $settings ),
 			'logo_alt'            => $this->get_logo_alt( $settings ),
 			'logo_url'            => $this->get_url_value( $settings['logo_link'] ?? array(), home_url( '/' ) ),
@@ -2323,6 +2436,7 @@ class Dope_Header_Widget extends Widget_Base {
 		}
 
 		echo '<div class="dh-main"><div class="dh-shell dh-main__inner">';
+		echo $this->get_logo_markup( $render_data, 'default-mobile' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
 
 		echo '<nav class="dh-nav" aria-label="' . esc_attr__( 'Primary navigation', 'dope-header' ) . '">';
 		if ( '' !== trim( $render_data['desktop_menu'] ) ) {
@@ -2343,14 +2457,7 @@ class Dope_Header_Widget extends Widget_Base {
 		echo '</div></div></div>';
 
 		echo '<div class="dh-brand-layer"><div class="dh-shell">';
-		printf(
-			'<div class="dh-brand-float"><a class="dh-brand-float__link" href="%1$s"%2$s%3$s><img class="dh-brand-float__logo" src="%4$s" alt="%5$s" loading="lazy" /></a></div>',
-			esc_url( $render_data['logo_url'] ),
-			isset( $render_data['logo_attributes']['target'] ) ? ' target="' . esc_attr( $render_data['logo_attributes']['target'] ) . '"' : '',
-			isset( $render_data['logo_attributes']['rel'] ) ? ' rel="' . esc_attr( $render_data['logo_attributes']['rel'] ) . '"' : '',
-			esc_url( $render_data['logo_src'] ),
-			esc_attr( $render_data['logo_alt'] )
-		);
+		echo $this->get_logo_markup( $render_data, 'default' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
 		echo '</div></div>';
 
 		$this->render_mobile_menu_container( $settings, $render_data, false );
@@ -2386,14 +2493,7 @@ class Dope_Header_Widget extends Widget_Base {
 		echo '<header class="' . esc_attr( $widget_classes ) . '" id="' . esc_attr( $render_data['uid'] ) . '" style="' . esc_attr( implode( ';', $style_parts ) ) . '" data-dh-mobile-config="' . esc_attr( $render_data['mobile_config_json'] ) . '" data-dh-sticky-config="' . esc_attr( wp_json_encode( $sticky_config ) ) . '">';
 		echo '<div class="dh-minimal-main"><div class="dh-shell dh-minimal-main__inner">';
 
-		printf(
-			'<div class="dh-minimal-brand"><a class="dh-minimal-brand__link" href="%1$s"%2$s%3$s><img class="dh-minimal-brand__logo" src="%4$s" alt="%5$s" loading="lazy" /></a></div>',
-			esc_url( $render_data['logo_url'] ),
-			isset( $render_data['logo_attributes']['target'] ) ? ' target="' . esc_attr( $render_data['logo_attributes']['target'] ) . '"' : '',
-			isset( $render_data['logo_attributes']['rel'] ) ? ' rel="' . esc_attr( $render_data['logo_attributes']['rel'] ) . '"' : '',
-			esc_url( $render_data['logo_src'] ),
-			esc_attr( $render_data['logo_alt'] )
-		);
+		echo $this->get_logo_markup( $render_data, 'minimal' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
 
 		echo '<nav class="dh-minimal-nav" aria-label="' . esc_attr__( 'Primary navigation', 'dope-header' ) . '">';
 		if ( '' !== trim( $render_data['desktop_menu'] ) ) {
@@ -2842,6 +2942,30 @@ class Dope_Header_Widget extends Widget_Base {
 	}
 
 	/**
+	 * Gets the configured logo type.
+	 *
+	 * @param array $settings Widget settings.
+	 * @return string
+	 */
+	private function get_logo_type( array $settings ): string {
+		$logo_type = isset( $settings['logo_type'] ) ? sanitize_key( (string) $settings['logo_type'] ) : 'image';
+
+		return in_array( $logo_type, array( 'image', 'text' ), true ) ? $logo_type : 'image';
+	}
+
+	/**
+	 * Gets the configured text logo value.
+	 *
+	 * @param array $settings Widget settings.
+	 * @return string
+	 */
+	private function get_logo_text( array $settings ): string {
+		$logo_text = isset( $settings['logo_text'] ) ? sanitize_text_field( $settings['logo_text'] ) : '';
+
+		return '' !== $logo_text ? $logo_text : get_bloginfo( 'name' );
+	}
+
+	/**
 	 * Gets the configured logo source URL.
 	 *
 	 * @param array $settings Widget settings.
@@ -2865,6 +2989,64 @@ class Dope_Header_Widget extends Widget_Base {
 		$logo_alt = isset( $settings['logo_alt'] ) ? sanitize_text_field( $settings['logo_alt'] ) : '';
 
 		return '' !== $logo_alt ? $logo_alt : get_bloginfo( 'name' );
+	}
+
+	/**
+	 * Builds the rendered logo markup for a header layout.
+	 *
+	 * @param array  $render_data Prepared render data.
+	 * @param string $layout      Target layout.
+	 * @return string
+	 */
+	private function get_logo_markup( array $render_data, string $layout ): string {
+		if ( 'minimal' === $layout ) {
+			$wrap_class = 'dh-minimal-brand';
+			$link_class = 'dh-minimal-brand__link';
+			$text_class = 'dh-minimal-brand__text';
+			$logo_class = 'dh-minimal-brand__logo';
+		} elseif ( 'default-mobile' === $layout ) {
+			$wrap_class = 'dh-default-mobile-brand';
+			$link_class = 'dh-default-mobile-brand__link';
+			$text_class = 'dh-default-mobile-brand__text';
+			$logo_class = 'dh-default-mobile-brand__logo';
+		} else {
+			$wrap_class = 'dh-brand-float';
+			$link_class = 'dh-brand-float__link';
+			$text_class = 'dh-brand-float__text';
+			$logo_class = 'dh-brand-float__logo';
+		}
+		$link_attrs = '';
+
+		if ( isset( $render_data['logo_attributes']['target'] ) ) {
+			$link_attrs .= ' target="' . esc_attr( $render_data['logo_attributes']['target'] ) . '"';
+		}
+
+		if ( isset( $render_data['logo_attributes']['rel'] ) ) {
+			$link_attrs .= ' rel="' . esc_attr( $render_data['logo_attributes']['rel'] ) . '"';
+		}
+
+		if ( 'text' === $render_data['logo_type'] ) {
+			return sprintf(
+				'<div class="%1$s"><a class="%2$s" href="%3$s"%4$s><span class="%5$s">%6$s</span></a></div>',
+				esc_attr( $wrap_class ),
+				esc_attr( $link_class ),
+				esc_url( $render_data['logo_url'] ),
+				$link_attrs,
+				esc_attr( $text_class ),
+				esc_html( $render_data['logo_text'] )
+			);
+		}
+
+		return sprintf(
+			'<div class="%1$s"><a class="%2$s" href="%3$s"%4$s><img class="%5$s" src="%6$s" alt="%7$s" loading="lazy" /></a></div>',
+			esc_attr( $wrap_class ),
+			esc_attr( $link_class ),
+			esc_url( $render_data['logo_url'] ),
+			$link_attrs,
+			esc_attr( $logo_class ),
+			esc_url( $render_data['logo_src'] ),
+			esc_attr( $render_data['logo_alt'] )
+		);
 	}
 
 	/**
