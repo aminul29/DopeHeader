@@ -823,6 +823,19 @@ class Dope_Header_Widget extends Widget_Base {
 		);
 
 		$actions_repeater->add_control(
+			'action_type',
+			array(
+				'label'   => esc_html__( 'Action Type', 'dope-header' ),
+				'type'    => Controls_Manager::SELECT,
+				'default' => 'link',
+				'options' => array(
+					'link' => esc_html__( 'Link', 'dope-header' ),
+					'cart' => esc_html__( 'Cart Drawer', 'dope-header' ),
+				),
+			)
+		);
+
+		$actions_repeater->add_control(
 			'action_link',
 			array(
 				'label'         => esc_html__( 'Link', 'dope-header' ),
@@ -833,6 +846,9 @@ class Dope_Header_Widget extends Widget_Base {
 					'url'         => '#',
 					'is_external' => false,
 					'nofollow'    => false,
+				),
+				'condition'     => array(
+					'action_type' => 'link',
 				),
 			)
 		);
@@ -858,6 +874,7 @@ class Dope_Header_Widget extends Widget_Base {
 				'title_field' => '{{{ action_label }}}',
 				'default'     => array(
 					array(
+						'action_type'  => 'link',
 						'action_label' => esc_html__( 'Search', 'dope-header' ),
 						'action_link'  => array(
 							'url'         => '#',
@@ -870,6 +887,7 @@ class Dope_Header_Widget extends Widget_Base {
 						),
 					),
 					array(
+						'action_type'  => 'link',
 						'action_label' => esc_html__( 'Account', 'dope-header' ),
 						'action_link'  => array(
 							'url'         => '#',
@@ -882,6 +900,7 @@ class Dope_Header_Widget extends Widget_Base {
 						),
 					),
 					array(
+						'action_type'  => 'cart',
 						'action_label' => esc_html__( 'Cart', 'dope-header' ),
 						'action_link'  => array(
 							'url'         => '#',
@@ -2340,8 +2359,12 @@ class Dope_Header_Widget extends Widget_Base {
 		);
 
 		$render_data['drawer_id'] = $render_data['uid'] . '-drawer';
+		$render_data['cart_drawer_id'] = $render_data['uid'] . '-cart-drawer';
 		$render_data['mobile_menu'] = $this->get_mobile_menu_markup( $menu_id, 'dh-menu dh-menu--mobile', $mobile_submenus, $render_data['uid'] );
 		$render_data['mobile_config_json'] = wp_json_encode( $mobile_config );
+		$render_data['has_cart_action'] = $this->has_cart_action( $settings );
+		$render_data['cart_drawer_enabled'] = $render_data['has_cart_action'] && $this->is_woocommerce_cart_available();
+		$render_data['cart_count'] = $render_data['cart_drawer_enabled'] ? $this->get_cart_count() : 0;
 
 		if ( 'minimal' === $layout ) {
 			$render_data['sticky_enabled']               = $this->is_enabled( $settings, 'enable_sticky_header', true );
@@ -2447,7 +2470,7 @@ class Dope_Header_Widget extends Widget_Base {
 		echo '</nav>';
 
 		echo '<div class="dh-actions-wrap"><div class="dh-actions">';
-		$this->render_actions( $settings );
+		$this->render_actions( $settings, $render_data );
 		echo '</div>';
 
 		if ( $render_data['mobile_enabled'] ) {
@@ -2461,6 +2484,7 @@ class Dope_Header_Widget extends Widget_Base {
 		echo '</div></div>';
 
 		$this->render_mobile_menu_container( $settings, $render_data, false );
+		$this->render_cart_drawer( $render_data );
 
 		echo '</header>';
 	}
@@ -2554,7 +2578,7 @@ class Dope_Header_Widget extends Widget_Base {
 			echo '</div>';
 		} elseif ( 'drawer' === $mode ) {
 			echo '<div class="dh-actions dh-actions--mobile">';
-			$this->render_actions( $settings );
+			$this->render_actions( $settings, $render_data );
 			echo '</div>';
 		}
 
@@ -2593,11 +2617,11 @@ class Dope_Header_Widget extends Widget_Base {
 	 * @param array $settings Widget settings.
 	 * @return void
 	 */
-	private function render_actions( array $settings ): void {
+	private function render_actions( array $settings, array $render_data = array() ): void {
 		$action_items = $this->get_action_items( $settings );
 
 		foreach ( $action_items as $action_item ) {
-			$this->render_single_action( $action_item );
+			$this->render_single_action( $action_item, $render_data );
 		}
 
 		if ( ! $this->is_enabled( $settings, 'show_language_menu', true ) ) {
@@ -2645,13 +2669,32 @@ class Dope_Header_Widget extends Widget_Base {
 	 * @param array $item Action repeater row.
 	 * @return void
 	 */
-	private function render_single_action( array $item ): void {
+	private function render_single_action( array $item, array $render_data = array() ): void {
 		$label            = isset( $item['action_label'] ) ? sanitize_text_field( $item['action_label'] ) : esc_html__( 'Action', 'dope-header' );
 		$url              = $this->get_url_value( $item['action_link'] ?? array(), '#' );
 		$link_attributes  = $this->get_link_attributes( $item['action_link'] ?? array() );
 		$action_icon_html = $this->get_action_icon_html( $item['action_icon'] ?? array() );
+		$action_type      = isset( $item['action_type'] ) ? sanitize_key( $item['action_type'] ) : 'link';
+		$is_cart_action   = 'cart' === $action_type;
+		$cart_enabled     = $is_cart_action && ! empty( $render_data['cart_drawer_enabled'] ) && ! empty( $render_data['cart_drawer_id'] );
 
 		if ( '' === $action_icon_html ) {
+			return;
+		}
+
+		if ( $cart_enabled ) {
+			$cart_count = isset( $render_data['cart_count'] ) ? absint( $render_data['cart_count'] ) : 0;
+
+			printf(
+				'<button type="button" class="dh-action dh-action--cart" data-dh-cart-toggle aria-expanded="false" aria-controls="%1$s" aria-label="%2$s">',
+				esc_attr( $render_data['cart_drawer_id'] ),
+				esc_attr( $label )
+			);
+			echo wp_kses( $action_icon_html, $this->get_allowed_svg_html() );
+			if ( $cart_count > 0 ) {
+				echo '<span class="dh-action__count" aria-hidden="true">' . esc_html( (string) $cart_count ) . '</span>';
+			}
+			echo '<span class="screen-reader-text">' . esc_html( $label ) . '</span></button>';
 			return;
 		}
 
@@ -2663,6 +2706,26 @@ class Dope_Header_Widget extends Widget_Base {
 		);
 		echo wp_kses( $action_icon_html, $this->get_allowed_svg_html() );
 		echo '<span class="screen-reader-text">' . esc_html( $label ) . '</span></a>';
+	}
+
+	/**
+	 * Renders the WooCommerce cart drawer.
+	 *
+	 * @param array $render_data Prepared render data.
+	 * @return void
+	 */
+	private function render_cart_drawer( array $render_data ): void {
+		if ( empty( $render_data['cart_drawer_enabled'] ) || empty( $render_data['cart_drawer_id'] ) ) {
+			return;
+		}
+
+		echo '<div class="dh-cart-drawer" id="' . esc_attr( $render_data['cart_drawer_id'] ) . '" hidden>';
+		echo '<button type="button" class="dh-cart-drawer__overlay" data-dh-cart-close aria-label="' . esc_attr__( 'Close cart', 'dope-header' ) . '"></button>';
+		echo '<div class="dh-cart-drawer__panel" role="dialog" aria-modal="true" aria-label="' . esc_attr__( 'Shopping cart', 'dope-header' ) . '">';
+		echo '<div class="dh-cart-drawer__header"><span class="dh-cart-drawer__title">' . esc_html__( 'Cart', 'dope-header' ) . '</span><button type="button" class="dh-cart-drawer__close" data-dh-cart-close aria-label="' . esc_attr__( 'Close cart', 'dope-header' ) . '">&times;</button></div>';
+		echo '<div class="dh-cart-drawer__body">';
+		echo $this->get_cart_drawer_content(); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
+		echo '</div></div></div>';
 	}
 
 	/**
@@ -3115,6 +3178,7 @@ class Dope_Header_Widget extends Widget_Base {
 			}
 
 			$items[] = array(
+				'action_type'  => $this->get_action_type( $row ),
 				'action_label' => isset( $row['action_label'] ) ? sanitize_text_field( $row['action_label'] ) : '',
 				'action_link'  => isset( $row['action_link'] ) && is_array( $row['action_link'] ) ? $row['action_link'] : array(),
 				'action_icon'  => $icon,
@@ -3122,6 +3186,85 @@ class Dope_Header_Widget extends Widget_Base {
 		}
 
 		return $items;
+	}
+
+	/**
+	 * Determines whether the widget has a cart action configured.
+	 *
+	 * @param array $settings Widget settings.
+	 * @return bool
+	 */
+	private function has_cart_action( array $settings ): bool {
+		foreach ( $this->get_action_items( $settings ) as $item ) {
+			if ( isset( $item['action_type'] ) && 'cart' === $item['action_type'] ) {
+				return true;
+			}
+		}
+
+		return false;
+	}
+
+	/**
+	 * Gets the normalized action type for a repeater row.
+	 *
+	 * Preserves support for existing saved widgets that predate the explicit type control.
+	 *
+	 * @param array $row Raw repeater row.
+	 * @return string
+	 */
+	private function get_action_type( array $row ): string {
+		if ( isset( $row['action_type'] ) && 'cart' === $row['action_type'] ) {
+			return 'cart';
+		}
+
+		$label = isset( $row['action_label'] ) ? sanitize_text_field( $row['action_label'] ) : '';
+		$icon  = isset( $row['action_icon']['value'] ) && is_string( $row['action_icon']['value'] ) ? strtolower( $row['action_icon']['value'] ) : '';
+
+		if ( 'cart' === strtolower( $label ) || false !== strpos( $icon, 'cart' ) || false !== strpos( $icon, 'basket' ) || false !== strpos( $icon, 'bag-shopping' ) ) {
+			return 'cart';
+		}
+
+		return 'link';
+	}
+
+	/**
+	 * Checks if WooCommerce cart APIs are available.
+	 *
+	 * @return bool
+	 */
+	private function is_woocommerce_cart_available(): bool {
+		return class_exists( 'WooCommerce' ) && function_exists( 'woocommerce_mini_cart' ) && function_exists( 'WC' ) && WC() && WC()->cart;
+	}
+
+	/**
+	 * Gets the current WooCommerce cart item count.
+	 *
+	 * @return int
+	 */
+	private function get_cart_count(): int {
+		if ( ! $this->is_woocommerce_cart_available() ) {
+			return 0;
+		}
+
+		return absint( WC()->cart->get_cart_contents_count() );
+	}
+
+	/**
+	 * Gets rendered mini-cart drawer content.
+	 *
+	 * @return string
+	 */
+	private function get_cart_drawer_content(): string {
+		if ( ! $this->is_woocommerce_cart_available() ) {
+			return '';
+		}
+
+		ob_start();
+		echo '<div class="dh-cart-drawer__mini-cart woocommerce">';
+		woocommerce_mini_cart();
+		echo '</div>';
+
+		return (string) ob_get_clean();
 	}
 
 	/**
