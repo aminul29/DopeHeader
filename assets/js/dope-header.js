@@ -345,13 +345,15 @@
     var ANIMATION_DURATION = 280;
     var drawer = root.querySelector('.dh-cart-drawer');
     var toggles = Array.prototype.slice.call(root.querySelectorAll('[data-dh-cart-toggle]'));
+    var body = drawer ? drawer.querySelector('.dh-cart-drawer__body') : null;
 
-    if (!drawer || !toggles.length) {
+    if (!drawer || !toggles.length || !body) {
       return;
     }
 
     var closeButtons = Array.prototype.slice.call(drawer.querySelectorAll('[data-dh-cart-close]'));
     var closeTimer = null;
+    var isUpdating = false;
 
     function clearCloseTimer() {
       if (!closeTimer) {
@@ -365,6 +367,78 @@
     function syncToggles(isOpen) {
       toggles.forEach(function (toggle) {
         toggle.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
+      });
+    }
+
+    function syncCartCount(nextRoot) {
+      var nextCount = nextRoot.querySelector('[data-dh-cart-toggle] .dh-action__count');
+
+      toggles.forEach(function (toggle) {
+        var currentCount = toggle.querySelector('.dh-action__count');
+
+        if (nextCount) {
+          if (!currentCount) {
+            currentCount = document.createElement('span');
+            currentCount.className = 'dh-action__count';
+            currentCount.setAttribute('aria-hidden', 'true');
+            toggle.appendChild(currentCount);
+          }
+
+          currentCount.textContent = nextCount.textContent;
+        } else if (currentCount) {
+          currentCount.remove();
+        }
+      });
+    }
+
+    function syncCartMarkup(markup) {
+      var parser = new window.DOMParser();
+      var nextDocument = parser.parseFromString(markup, 'text/html');
+      var rootId = root.getAttribute('id');
+      var nextRoot = rootId ? nextDocument.getElementById(rootId) : null;
+      var nextBody = nextRoot ? nextRoot.querySelector('.dh-cart-drawer__body') : null;
+
+      if (!nextRoot || !nextBody) {
+        return false;
+      }
+
+      body.innerHTML = nextBody.innerHTML;
+      syncCartCount(nextRoot);
+      return true;
+    }
+
+    function refreshCartDrawer() {
+      return window.fetch(window.location.href, {
+        credentials: 'same-origin',
+        headers: {
+          'X-Requested-With': 'XMLHttpRequest'
+        }
+      }).then(function (response) {
+        if (!response.ok) {
+          throw new Error('Failed to refresh cart drawer');
+        }
+
+        return response.text();
+      }).then(function (markup) {
+        if (!syncCartMarkup(markup)) {
+          window.location.reload();
+        }
+      });
+    }
+
+    function removeCartItem(url) {
+      return window.fetch(url, {
+        method: 'GET',
+        credentials: 'same-origin',
+        headers: {
+          'X-Requested-With': 'XMLHttpRequest'
+        }
+      }).then(function (response) {
+        if (!response.ok) {
+          throw new Error('Failed to remove cart item');
+        }
+
+        return refreshCartDrawer();
       });
     }
 
@@ -413,6 +487,27 @@
       }
     };
 
+    var onDrawerClick = function (event) {
+      var removeButton = event.target.closest('.dh-cart-item__remove');
+
+      if (!removeButton || !drawer.contains(removeButton) || isUpdating) {
+        return;
+      }
+
+      event.preventDefault();
+      isUpdating = true;
+      drawer.classList.add('is-updating');
+      body.setAttribute('aria-busy', 'true');
+
+      removeCartItem(removeButton.getAttribute('href')).catch(function () {
+        window.location.href = removeButton.getAttribute('href');
+      }).finally(function () {
+        isUpdating = false;
+        drawer.classList.remove('is-updating');
+        body.removeAttribute('aria-busy');
+      });
+    };
+
     toggles.forEach(function (toggle) {
       toggle.addEventListener('click', onToggle);
     });
@@ -422,6 +517,7 @@
     });
 
     window.addEventListener('keydown', onWindowKeydown);
+    drawer.addEventListener('click', onDrawerClick);
 
     cleanups.push(function () {
       toggles.forEach(function (toggle) {
@@ -431,11 +527,15 @@
         button.removeEventListener('click', closeDrawer);
       });
       window.removeEventListener('keydown', onWindowKeydown);
+      drawer.removeEventListener('click', onDrawerClick);
       clearCloseTimer();
       drawer.classList.remove('is-open');
+      drawer.classList.remove('is-updating');
       drawer.hidden = true;
       root.classList.remove('is-cart-open');
       syncToggles(false);
+      body.removeAttribute('aria-busy');
+      isUpdating = false;
     });
   }
 
