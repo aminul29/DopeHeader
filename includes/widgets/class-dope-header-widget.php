@@ -1149,8 +1149,324 @@ class Dope_Header_Widget extends Widget_Base {
 		$this->register_style_nav_controls();
 		$this->register_style_menu_controls();
 		$this->register_style_actions_controls();
+		$this->register_style_cart_controls();
 		$this->register_style_minimal_controls();
 		$this->register_style_mobile_controls();
+	}
+
+	/**
+	 * Registers cart drawer style controls.
+	 *
+	 * @return void
+	 */
+	private function register_style_cart_controls(): void {
+		$this->start_controls_section(
+			'section_style_cart',
+			array(
+				'label' => esc_html__( 'Cart Drawer', 'dope-header' ),
+				'tab'   => Controls_Manager::TAB_STYLE,
+			)
+		);
+
+		$this->add_control(
+			'cart_panel_heading',
+			array(
+				'label' => esc_html__( 'Panel', 'dope-header' ),
+				'type'  => Controls_Manager::HEADING,
+			)
+		);
+
+		$this->add_control(
+			'cart_overlay_color',
+			array(
+				'label'     => esc_html__( 'Overlay Color', 'dope-header' ),
+				'type'      => Controls_Manager::COLOR,
+				'default'   => 'rgba(0, 0, 0, 0.52)',
+				'selectors' => array(
+					'{{WRAPPER}} .dh-cart-drawer__overlay' => 'background-color: {{VALUE}};',
+				),
+			)
+		);
+
+		$this->add_control(
+			'cart_panel_background',
+			array(
+				'label'     => esc_html__( 'Background Color', 'dope-header' ),
+				'type'      => Controls_Manager::COLOR,
+				'default'   => '#ffffff',
+				'selectors' => array(
+					'{{WRAPPER}} .dh-cart-drawer__panel' => 'background-color: {{VALUE}};',
+				),
+			)
+		);
+
+		$this->add_control(
+			'cart_panel_text_color',
+			array(
+				'label'     => esc_html__( 'Text Color', 'dope-header' ),
+				'type'      => Controls_Manager::COLOR,
+				'default'   => '#111111',
+				'selectors' => array(
+					'{{WRAPPER}} .dh-cart-drawer__panel' => 'color: {{VALUE}};',
+				),
+			)
+		);
+
+		$this->add_responsive_control(
+			'cart_panel_width',
+			array(
+				'label'      => esc_html__( 'Drawer Width', 'dope-header' ),
+				'type'       => Controls_Manager::SLIDER,
+				'size_units' => array( 'px', 'vw' ),
+				'range'      => array(
+					'px' => array(
+						'min' => 260,
+						'max' => 640,
+					),
+					'vw' => array(
+						'min' => 50,
+						'max' => 100,
+					),
+				),
+				'default'    => array(
+					'size' => 360,
+					'unit' => 'px',
+				),
+				'selectors'  => array(
+					'{{WRAPPER}} .dh-cart-drawer__panel' => 'width: {{SIZE}}{{UNIT}};',
+				),
+			)
+		);
+
+		$this->add_control(
+			'cart_items_divider',
+			array(
+				'type' => Controls_Manager::DIVIDER,
+			)
+		);
+
+		$this->add_control(
+			'cart_items_heading',
+			array(
+				'label' => esc_html__( 'Items List', 'dope-header' ),
+				'type'  => Controls_Manager::HEADING,
+			)
+		);
+
+		$this->add_group_control(
+			Group_Control_Typography::get_type(),
+			array(
+				'name'     => 'cart_item_title_typography',
+				'selector' => '{{WRAPPER}} .dh-cart-item__title',
+			)
+		);
+
+		$this->add_control(
+			'cart_item_title_color',
+			array(
+				'label'     => esc_html__( 'Item Title Color', 'dope-header' ),
+				'type'      => Controls_Manager::COLOR,
+				'default'   => '#333333',
+				'selectors' => array(
+					'{{WRAPPER}} .dh-cart-item__title, {{WRAPPER}} .dh-cart-item__title a' => 'color: {{VALUE}};',
+				),
+			)
+		);
+
+		$this->add_control(
+			'cart_item_meta_color',
+			array(
+				'label'     => esc_html__( 'Meta Color', 'dope-header' ),
+				'type'      => Controls_Manager::COLOR,
+				'default'   => '#7a7a7a',
+				'selectors' => array(
+					'{{WRAPPER}} .dh-cart-item__meta, {{WRAPPER}} .dh-cart-item__meta *' => 'color: {{VALUE}};',
+				),
+			)
+		);
+
+		$this->add_control(
+			'cart_item_price_color',
+			array(
+				'label'     => esc_html__( 'Price Color', 'dope-header' ),
+				'type'      => Controls_Manager::COLOR,
+				'default'   => '#111111',
+				'selectors' => array(
+					'{{WRAPPER}} .dh-cart-item__price' => 'color: {{VALUE}};',
+				),
+			)
+		);
+
+		$this->add_control(
+			'cart_item_divider_color',
+			array(
+				'label'     => esc_html__( 'Divider Color', 'dope-header' ),
+				'type'      => Controls_Manager::COLOR,
+				'default'   => 'rgba(17, 17, 17, 0.08)',
+				'selectors' => array(
+					'{{WRAPPER}} .dh-cart-item' => 'border-bottom-color: {{VALUE}};',
+					'{{WRAPPER}} .dh-cart-drawer__summary' => 'border-top-color: {{VALUE}};',
+				),
+			)
+		);
+
+		$this->add_responsive_control(
+			'cart_item_gap',
+			array(
+				'label'      => esc_html__( 'Item Gap', 'dope-header' ),
+				'type'       => Controls_Manager::SLIDER,
+				'size_units' => array( 'px' ),
+				'range'      => array(
+					'px' => array(
+						'min' => 8,
+						'max' => 32,
+					),
+				),
+				'default'    => array(
+					'size' => 12,
+					'unit' => 'px',
+				),
+				'selectors'  => array(
+					'{{WRAPPER}} .dh-cart-item' => 'gap: {{SIZE}}{{UNIT}};',
+				),
+			)
+		);
+
+		$this->add_control(
+			'cart_remove_divider',
+			array(
+				'type' => Controls_Manager::DIVIDER,
+			)
+		);
+
+		$this->add_control(
+			'cart_remove_heading',
+			array(
+				'label' => esc_html__( 'Remove Button', 'dope-header' ),
+				'type'  => Controls_Manager::HEADING,
+			)
+		);
+
+		$this->add_control(
+			'cart_remove_color',
+			array(
+				'label'     => esc_html__( 'Icon Color', 'dope-header' ),
+				'type'      => Controls_Manager::COLOR,
+				'default'   => '#666666',
+				'selectors' => array(
+					'{{WRAPPER}} .dh-cart-item__remove' => 'color: {{VALUE}}; border-color: {{VALUE}};',
+				),
+			)
+		);
+
+		$this->add_control(
+			'cart_remove_hover_color',
+			array(
+				'label'     => esc_html__( 'Hover Color', 'dope-header' ),
+				'type'      => Controls_Manager::COLOR,
+				'default'   => '#111111',
+				'selectors' => array(
+					'{{WRAPPER}} .dh-cart-item__remove:hover, {{WRAPPER}} .dh-cart-item__remove:focus-visible' => 'color: {{VALUE}}; border-color: {{VALUE}};',
+				),
+			)
+		);
+
+		$this->add_control(
+			'cart_summary_divider',
+			array(
+				'type' => Controls_Manager::DIVIDER,
+			)
+		);
+
+		$this->add_control(
+			'cart_summary_heading',
+			array(
+				'label' => esc_html__( 'Subtotal and Buttons', 'dope-header' ),
+				'type'  => Controls_Manager::HEADING,
+			)
+		);
+
+		$this->add_group_control(
+			Group_Control_Typography::get_type(),
+			array(
+				'name'     => 'cart_summary_typography',
+				'selector' => '{{WRAPPER}} .dh-cart-drawer__summary',
+			)
+		);
+
+		$this->add_control(
+			'cart_summary_color',
+			array(
+				'label'     => esc_html__( 'Subtotal Color', 'dope-header' ),
+				'type'      => Controls_Manager::COLOR,
+				'default'   => '#111111',
+				'selectors' => array(
+					'{{WRAPPER}} .dh-cart-drawer__summary' => 'color: {{VALUE}};',
+				),
+			)
+		);
+
+		$this->add_control(
+			'cart_button_text_color',
+			array(
+				'label'     => esc_html__( 'Button Text Color', 'dope-header' ),
+				'type'      => Controls_Manager::COLOR,
+				'default'   => '#ffffff',
+				'selectors' => array(
+					'{{WRAPPER}} .dh-cart-drawer__actions .button:not(.checkout)' => 'color: {{VALUE}};',
+				),
+			)
+		);
+
+		$this->add_control(
+			'cart_button_background',
+			array(
+				'label'     => esc_html__( 'Primary Button Background', 'dope-header' ),
+				'type'      => Controls_Manager::COLOR,
+				'default'   => '#111111',
+				'selectors' => array(
+					'{{WRAPPER}} .dh-cart-drawer__actions .button:not(.checkout)' => 'background-color: {{VALUE}}; border-color: {{VALUE}};',
+				),
+			)
+		);
+
+		$this->add_control(
+			'cart_checkout_text_color',
+			array(
+				'label'     => esc_html__( 'Checkout Text Color', 'dope-header' ),
+				'type'      => Controls_Manager::COLOR,
+				'default'   => '#111111',
+				'selectors' => array(
+					'{{WRAPPER}} .dh-cart-drawer__actions .button.checkout' => 'color: {{VALUE}};',
+				),
+			)
+		);
+
+		$this->add_control(
+			'cart_checkout_background',
+			array(
+				'label'     => esc_html__( 'Checkout Background', 'dope-header' ),
+				'type'      => Controls_Manager::COLOR,
+				'default'   => 'transparent',
+				'selectors' => array(
+					'{{WRAPPER}} .dh-cart-drawer__actions .button.checkout' => 'background-color: {{VALUE}};',
+				),
+			)
+		);
+
+		$this->add_control(
+			'cart_checkout_border_color',
+			array(
+				'label'     => esc_html__( 'Checkout Border Color', 'dope-header' ),
+				'type'      => Controls_Manager::COLOR,
+				'default'   => '#111111',
+				'selectors' => array(
+					'{{WRAPPER}} .dh-cart-drawer__actions .button.checkout' => 'border-color: {{VALUE}};',
+				),
+			)
+		);
+
+		$this->end_controls_section();
 	}
 
 	/**
@@ -3259,9 +3575,75 @@ class Dope_Header_Widget extends Widget_Base {
 			return '';
 		}
 
+		$cart_items = WC()->cart->get_cart();
+
 		ob_start();
 		echo '<div class="dh-cart-drawer__mini-cart woocommerce">';
-		woocommerce_mini_cart();
+
+		if ( empty( $cart_items ) ) {
+			echo '<p class="dh-cart-drawer__empty woocommerce-mini-cart__empty-message">' . esc_html__( 'No products in the cart.', 'dope-header' ) . '</p>';
+		} else {
+			echo '<ul class="dh-cart-drawer__items" role="list">';
+
+			foreach ( $cart_items as $cart_item_key => $cart_item ) {
+				$product = apply_filters( 'woocommerce_cart_item_product', $cart_item['data'], $cart_item, $cart_item_key );
+
+				if ( ! $product || ! $product->exists() || $cart_item['quantity'] <= 0 ) {
+					continue;
+				}
+
+				$product_id   = apply_filters( 'woocommerce_cart_item_product_id', $cart_item['product_id'], $cart_item, $cart_item_key );
+				$product_name = apply_filters( 'woocommerce_cart_item_name', $product->get_name(), $cart_item, $cart_item_key );
+				$product_link = apply_filters( 'woocommerce_cart_item_permalink', $product->is_visible() ? $product->get_permalink( $cart_item ) : '', $cart_item, $cart_item_key );
+				$thumbnail    = apply_filters( 'woocommerce_cart_item_thumbnail', $product->get_image( 'woocommerce_thumbnail' ), $cart_item, $cart_item_key );
+				$item_price   = apply_filters( 'woocommerce_cart_item_price', WC()->cart->get_product_price( $product ), $cart_item, $cart_item_key );
+				$item_meta    = wc_get_formatted_cart_item_data( $cart_item, true );
+				$remove_url   = wc_get_cart_remove_url( $cart_item_key );
+				$remove_label = sprintf(
+					/* translators: %s: product name. */
+					esc_html__( 'Remove %s from cart', 'dope-header' ),
+					wp_strip_all_tags( $product_name )
+				);
+
+				echo '<li class="dh-cart-item">';
+				echo '<div class="dh-cart-item__thumb">';
+				if ( '' !== $product_link ) {
+					echo '<a href="' . esc_url( $product_link ) . '" class="dh-cart-item__thumb-link">';
+					echo wp_kses_post( $thumbnail );
+					echo '</a>';
+				} else {
+					echo wp_kses_post( $thumbnail );
+				}
+				echo '</div>';
+
+				echo '<div class="dh-cart-item__content">';
+				echo '<div class="dh-cart-item__title">';
+				if ( '' !== $product_link ) {
+					echo '<a href="' . esc_url( $product_link ) . '">' . wp_kses_post( $product_name ) . '</a>';
+				} else {
+					echo wp_kses_post( $product_name );
+				}
+				echo '</div>';
+
+				if ( '' !== $item_meta ) {
+					echo '<div class="dh-cart-item__meta">' . wp_kses_post( $item_meta ) . '</div>';
+				}
+
+				echo '<div class="dh-cart-item__price">' . wp_kses_post( sprintf( '%1$s x %2$s', $cart_item['quantity'], $item_price ) ) . '</div>';
+				echo '</div>';
+
+				echo '<a href="' . esc_url( $remove_url ) . '" class="dh-cart-item__remove remove remove_from_cart_button" aria-label="' . esc_attr( $remove_label ) . '" data-product_id="' . esc_attr( (string) $product_id ) . '" data-cart_item_key="' . esc_attr( $cart_item_key ) . '" data-product_sku="' . esc_attr( $product->get_sku() ) . '">&times;</a>';
+				echo '</li>';
+			}
+
+			echo '</ul>';
+			echo '<div class="dh-cart-drawer__summary"><span>' . esc_html__( 'Subtotal', 'dope-header' ) . '</span><strong>' . wp_kses_post( WC()->cart->get_cart_subtotal() ) . '</strong></div>';
+			echo '<div class="dh-cart-drawer__actions">';
+			echo '<a href="' . esc_url( wc_get_cart_url() ) . '" class="button wc-forward">' . esc_html__( 'View cart', 'dope-header' ) . '</a>';
+			echo '<a href="' . esc_url( wc_get_checkout_url() ) . '" class="button checkout wc-forward">' . esc_html__( 'Checkout', 'dope-header' ) . '</a>';
+			echo '</div>';
+		}
+
 		echo '</div>';
 
 		return (string) ob_get_clean();
